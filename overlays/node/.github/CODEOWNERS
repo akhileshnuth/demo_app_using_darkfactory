@@ -1,0 +1,7 @@
+# Mirror SECURITY_ZONES.md: the paths agents are denied are the paths
+# humans must review. Replace the placeholders with your team handles.
+/src/auth/       @your-org/security-owners
+/src/payments/   @your-org/payments-owners
+/src/customers/  @your-org/data-owners
+/SECURITY_ZONES.md @your-org/security-owners
+/.github/        @your-org/maintainers

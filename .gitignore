@@ -1,47 +1,24 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+# ── Factory runtime outputs — produced during a run, NEVER committed.
+# Delivery stages the whole worktree (git add -A), so anything not listed
+# here lands in the customer-facing PR diff.
+test-results/
+playwright-report/
+.specify/feature.json
+
+# ── Toolchain
+node_modules/
+.opencode/node_modules/
 dist/
 build/
-.venv/
-venv/
-*.egg
-.pytest_cache/
-.coverage
-htmlcov/
 coverage/
-*.pyo
-.ruff_cache/
+*.log
 
-# Environment
+# ── Credentials — never in git, in any project, in any language.
 .env
-.env.local
-.env.*.local
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Generated / large artifacts — not committed
-# The factory populates security/ and specs/ at runtime.
-# The pin file (if you use a benchmark dataset) is committed;
-# the materialised payload blobs are not.
-benchmarks/datasets/*
-!benchmarks/datasets/.gitkeep
-
-# Private keys and credential material
+.env.*
+!.env.example
 *.pem
 *.p12
-*.pfx
 *.key
-*_rsa
-*_ed25519
-*.private-key*
 id_rsa*
+*.private-key*

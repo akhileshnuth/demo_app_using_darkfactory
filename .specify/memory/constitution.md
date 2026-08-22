@@ -16,19 +16,19 @@ Specify → (Clarify ↔ user) → Plan → Tasks → (Analyze ↔ user) →
 Implement ↔ Converge → Done. Partial pipelines are not valid; a spec
 started must be finished or explicitly abandoned.
 
-### II. The Entire Codebase Is Agent-Accessible
-There are no human-only zones in this repository. Autonomous agents may
-read and write any path. Sensitive decisions are governed by the factory's
-policy layer and HITL approval gates — not by zone restrictions in this
-constitution.
+### II. Security Zones Are Declared, Never Assumed
+Sensitive paths (auth, payments, PII, secrets handling) are declared in
+`SECURITY_ZONES.md` at the repo root AND mirrored into the factory's zone
+map (`agentguard/policies/zones/zones-v0.json`, or the `FACTORY_ZONES`
+env override) — the factory enforces from ITS config, not from this repo.
+Agent writes inside a zone are denied by policy and recorded; changes to
+zoned paths are human work. Zone names must come from the factory's
+recognized set (today: `payments`, `auth`, `pii`).
 
-<!-- If your project has sensitive paths (auth, payments, PII), replace
-     Principle II with zone definitions and add a SECURITY_ZONES.md.
-     Example:
-     ### II. Security Zones
-     `src/auth/` and `src/payments/` are sensitive zones. Agent writes to
-     these paths require HITL approval. The factory enforces this via
-     SECURITY_ZONES.md at the repo root. -->
+If this project genuinely has no sensitive paths, say so EXPLICITLY:
+replace this principle with "This repository declares no security zones
+(reviewed <date>, by <name>)" and delete `SECURITY_ZONES.md` — an empty
+zone map must be a recorded decision, never a default.
 
 ### III. Human-Gated Merge (NON-NEGOTIABLE)
 Every change lands as a pull request against protected `main` and cannot

@@ -1,0 +1,6 @@
+# Shell scripts must stay LF: they execute inside the factory's Linux
+# sandbox, and a CRLF checkout also breaks the dev agent's file editing
+# (opencode's Edit matches oldString byte-for-byte). Windows contributors
+# with core.autocrlf=true are the audience for these two lines.
+*.sh text eol=lf
+.specify/scripts/** text eol=lf
