@@ -1,6 +1,6 @@
 # lightspeed-project-template
 
-Make any repository workable by [AgentLightspeed](https://github.com/aitronixsolutions/lightspeed):
+Make any repository workable by [LightSpeed](https://github.com/aitronixsolutions/lightspeed):
 a Jira ticket goes in; a governed, human-approved, evidence-attested pull
 request comes out. This template ships the **governance core** every
 project needs, plus **stack overlays** for build/test/evidence wiring.
@@ -65,7 +65,7 @@ lightspeed repo.
   work the repo, but nothing installs and no tests run — the factory
   marks such tickets **UNVERIFIED** on the PR and the approval card.
 - **The factory writes** `specs/<KEY>/`, `security/`, and commits to
-  `factory/<KEY>` branches as `AgentLightspeed`; a spec-only change is
+  `factory/<KEY>` branches as `LightSpeed`; a spec-only change is
   a failed ticket (agents must change code).
 - **Line endings**: scripts stay LF (`.gitattributes` enforces it) —
   CRLF breaks both script execution and the dev agent's file editing.
