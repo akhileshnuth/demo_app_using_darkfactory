@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Does this repo still satisfy the darkfactory target-repo contract?
+// Does this repo still satisfy the lightspeed target-repo contract?
 // Zero dependencies; run any time (CI runs it on every PR). Checks are
 // derived from the factory's own source — see docs/TARGET-REPO-CONTRACT.md
-// in the darkfactory repo for the authoritative list.
+// in the lightspeed repo for the authoritative list.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
