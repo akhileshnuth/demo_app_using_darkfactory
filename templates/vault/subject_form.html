@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object.pk %}Edit Subject{% else %}New Subject{% endif %} — Vault{% endblock %}
+
+{% block content %}
+<h1>{% if object.pk %}Edit Subject{% else %}New Subject{% endif %}</h1>
+<form method="post" action="">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="form-field{% if field.errors %} has-errors{% endif %}">
+      {{ field.label_tag }}
+      {{ field }}
+      {% for error in field.errors %}
+        <span class="error">{{ error }}</span>
+      {% endfor %}
+    </div>
+  {% endfor %}
+  <button type="submit">Save</button>
+  <a href="{% url 'vault:subject_list' %}">Cancel</a>
+</form>
+{% endblock %}

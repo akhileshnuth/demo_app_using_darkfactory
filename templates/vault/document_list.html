@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Documents — Vault{% endblock %}
+
+{% block content %}
+<h1>Documents</h1>
+<p>
+  <a href="{% url 'vault:document_create' %}">Add document</a> |
+  <a href="{% url 'vault:category_list' %}">Categories</a> |
+  <a href="{% url 'vault:subject_list' %}">Subjects</a> |
+  <a href="{% url 'vault:documenttype_list' %}">Document Types</a>
+</p>
+
+<form method="get" action="" class="filter-form" style="margin-bottom:1rem;">
+  <div class="form-field">
+    <label for="id_q">Search</label>
+    <input type="text" id="id_q" name="q" value="{{ current_filters.q }}" placeholder="Search by title...">
+  </div>
+  <div class="form-field">
+    <label for="id_category">Category</label>
+    <select id="id_category" name="category">
+      <option value="">All categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat.pk }}"{% if current_filters.category == cat.pk|stringformat:"d" %} selected{% endif %}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-field">
+    <label for="id_subject">Subject</label>
+    <select id="id_subject" name="subject">
+      <option value="">All subjects</option>
+      {% for subj in subjects %}
+        <option value="{{ subj.pk }}"{% if current_filters.subject == subj.pk|stringformat:"d" %} selected{% endif %}>{{ subj.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-field">
+    <label for="id_document_type">Document Type</label>
+    <select id="id_document_type" name="document_type">
+      <option value="">All types</option>
+      {% for dt in document_types %}
+        <option value="{{ dt.pk }}"{% if current_filters.document_type == dt.pk|stringformat:"d" %} selected{% endif %}>{{ dt.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit">Filter</button>
+  <a href="{% url 'vault:document_list' %}">Clear</a>
+</form>
+
+{% if messages %}
+  {% for message in messages %}
+    <p class="error">{{ message }}</p>
+  {% endfor %}
+{% endif %}
+
+{% if documents %}
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Category</th>
+      <th>Subject</th>
+      <th>Type</th>
+      <th>Updated</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for doc in documents %}
+    <tr>
+      <td><a href="{% url 'vault:document_detail' doc.pk %}">{{ doc.title }}</a></td>
+      <td>{{ doc.category.name }}</td>
+      <td>{{ doc.subject.name }}</td>
+      <td>{{ doc.document_type.name }}</td>
+      <td>{{ doc.updated_at }}</td>
+      <td>
+        <a href="{% url 'vault:document_update' doc.pk %}">Edit</a>
+        <a href="{% url 'vault:document_delete' doc.pk %}">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No documents found.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.title }} — Vault{% endblock %}
+
+{% block content %}
+<h1>{{ document.title }}</h1>
+
+<dl class="account-details">
+  <dt>Category</dt>
+  <dd>{{ document.category.name }}</dd>
+  <dt>Subject</dt>
+  <dd>{{ document.subject.name }}</dd>
+  <dt>Document Type</dt>
+  <dd>{{ document.document_type.name }}</dd>
+  <dt>Notes</dt>
+  <dd>{{ document.notes|default:"—" }}</dd>
+  <dt>Created</dt>
+  <dd>{{ document.created_at }}</dd>
+  <dt>Updated</dt>
+  <dd>{{ document.updated_at }}</dd>
+</dl>
+
+<p>
+  <a href="{% url 'vault:document_update' document.pk %}">Edit</a> |
+  <a href="{% url 'vault:document_delete' document.pk %}">Delete</a> |
+  <a href="{% url 'vault:document_list' %}">Back to documents</a>
+</p>
+{% endblock %}

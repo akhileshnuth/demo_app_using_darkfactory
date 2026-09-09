@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Categories — Vault{% endblock %}
+
+{% block content %}
+<h1>Categories</h1>
+<p><a href="{% url 'vault:category_create' %}">Add category</a></p>
+
+{% if messages %}
+  {% for message in messages %}
+    <p class="error">{{ message }}</p>
+  {% endfor %}
+{% endif %}
+
+{% if categories %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for cat in categories %}
+    <tr>
+      <td>{{ cat.name }}</td>
+      <td>{{ cat.description|default:"—" }}</td>
+      <td>
+        <a href="{% url 'vault:category_update' cat.pk %}">Edit</a>
+        <a href="{% url 'vault:category_delete' cat.pk %}">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No categories yet.</p>
+{% endif %}
+
+<p><a href="{% url 'vault:document_list' %}">Back to documents</a></p>
+{% endblock %}

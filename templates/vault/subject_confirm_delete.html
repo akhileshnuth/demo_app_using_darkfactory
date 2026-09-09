@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Subject — Vault{% endblock %}
+
+{% block content %}
+<h1>Delete Subject</h1>
+<p>Are you sure you want to delete <strong>{{ object.name }}</strong>?</p>
+<form method="post" action="">
+  {% csrf_token %}
+  <button type="submit">Yes, delete</button>
+  <a href="{% url 'vault:subject_list' %}">Cancel</a>
+</form>
+{% endblock %}
