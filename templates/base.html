@@ -1,0 +1,37 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Scaffold{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+</head>
+<body>
+{% block shell %}
+<div class="app">
+  <aside id="sidebar" class="sidebar">
+    <nav aria-label="Main navigation">
+      <ul>
+        <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li><a href="{% url 'profile' %}">Profile</a></li>
+      </ul>
+    </nav>
+  </aside>
+  <div class="shell">
+    <header id="header" class="header">
+      <span class="display-name">{{ user.display_name|default:user.email }}</span>
+      {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit">Log out</button>
+      </form>
+      {% endif %}
+    </header>
+    <main id="main" class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+</body>
+</html>

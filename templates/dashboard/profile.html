@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<h1>Profile</h1>
+<dl class="account-details">
+  <dt>Email</dt>
+  <dd>{{ user.email }}</dd>
+  <dt>Display name</dt>
+  <dd>{{ user.display_name|default:"Not set" }}</dd>
+</dl>
+<form method="post" action="{% url 'profile' %}" class="profile-form">
+  {% csrf_token %}
+  <div class="form-field{% if form.display_name.errors %} has-errors{% endif %}">
+    {{ form.display_name.label_tag }}
+    {{ form.display_name }}
+    {% for error in form.display_name.errors %}
+      <span class="error">{{ error }}</span>
+    {% endfor %}
+  </div>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

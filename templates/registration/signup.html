@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Create account{% endblock %}
+
+{% block shell %}
+<main class="public-main">
+  <h1>Create account</h1>
+  <form method="post" action="{% url 'signup' %}" class="auth-form">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="form-field{% if field.errors %} has-errors{% endif %}">
+        {{ field.label_tag }}
+        {{ field }}
+        {% for error in field.errors %}
+          <span class="error">{{ error }}</span>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit">Create account</button>
+  </form>
+  <p class="auth-link">Already have an account? <a href="{% url 'login' %}">Log in</a>.</p>
+</main>
+{% endblock %}
