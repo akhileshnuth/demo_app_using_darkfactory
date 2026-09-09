@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Shared with me{% endblock %}
+
+{% block content %}
+<h1>Shared with me</h1>
+
+{% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <p class="{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if shared %}
+  <ul class="checklist-list">
+    {% for checklist in shared %}
+      <li class="checklist-item">
+        <a href="{% url 'checklist_detail' checklist.pk %}">{{ checklist.title }}</a>
+        <span class="shared-by">Shared by {{ checklist.owner.display_name|default:checklist.owner.email }}</span>
+        <span class="item-meta">
+          {{ checklist.item_count }} item{{ checklist.item_count|pluralize }} ·
+          {{ checklist.completion_percentage }}% complete
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty">Nothing has been shared with you yet.</p>
+{% endif %}
+{% endblock %}

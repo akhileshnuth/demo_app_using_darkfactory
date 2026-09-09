@@ -3,7 +3,7 @@
   "bomFormat": "CycloneDX",
   "components": [
     {
-      "bom-ref": "bbd30638-ed0d-485d-9cb7-4c3d904be0ea",
+      "bom-ref": "01608b32-9bbc-47ac-b33b-fb63c6e6768e",
       "name": ".opencode/package-lock.json",
       "properties": [
         {
@@ -797,15 +797,15 @@
   "dependencies": [
     {
       "dependsOn": [
-        "bbd30638-ed0d-485d-9cb7-4c3d904be0ea"
+        "pkg:npm/%40opencode-ai/plugin@1.18.3"
       ],
-      "ref": "a8aa6a2f-83b1-418a-b269-2e8d269eac83"
+      "ref": "01608b32-9bbc-47ac-b33b-fb63c6e6768e"
     },
     {
       "dependsOn": [
-        "pkg:npm/%40opencode-ai/plugin@1.18.3"
+        "01608b32-9bbc-47ac-b33b-fb63c6e6768e"
       ],
-      "ref": "bbd30638-ed0d-485d-9cb7-4c3d904be0ea"
+      "ref": "d53ed87f-de02-4f77-bd95-f535db1c0423"
     },
     {
       "dependsOn": [
@@ -980,7 +980,7 @@
   ],
   "metadata": {
     "component": {
-      "bom-ref": "a8aa6a2f-83b1-418a-b269-2e8d269eac83",
+      "bom-ref": "d53ed87f-de02-4f77-bd95-f535db1c0423",
       "name": "/scan",
       "properties": [
         {
@@ -990,7 +990,7 @@
       ],
       "type": "application"
     },
-    "timestamp": "2026-09-09T05:48:43+00:00",
+    "timestamp": "2026-09-09T10:04:40+00:00",
     "tools": {
       "components": [
         {
@@ -1005,7 +1005,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:397d95e2-1bb3-4e5f-984f-02e53998bbf5",
+  "serialNumber": "urn:uuid:239cefbb-6f71-4a0a-9ff1-d36977424082",
   "specVersion": "1.7",
   "version": 1,
   "vulnerabilities": []
