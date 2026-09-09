@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Log in{% endblock %}
+
+{% block shell %}
+<main class="public-main">
+  <h1>Log in</h1>
+  <form method="post" action="{% url 'login' %}" class="auth-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">
+        {% for error in form.non_field_errors %}
+          <p class="error">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% for field in form %}
+      <div class="form-field{% if field.errors %} has-errors{% endif %}">
+        {{ field.label_tag }}
+        {{ field }}
+        {% for error in field.errors %}
+          <span class="error">{{ error }}</span>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit">Log in</button>
+  </form>
+  <p class="auth-link">New here? <a href="{% url 'signup' %}">Create an account</a>.</p>
+</main>
+{% endblock %}

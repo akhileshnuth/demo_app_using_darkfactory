@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+<p>Welcome{% if user.display_name %}, {{ user.display_name }}{% endif %}! This is the dashboard shell.</p>
+<div class="placeholder">
+  <h2>Main content area</h2>
+  <p>Placeholder content for future features.</p>
+</div>
+{% endblock %}

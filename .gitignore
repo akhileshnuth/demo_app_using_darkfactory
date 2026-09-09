@@ -22,3 +22,9 @@ coverage/
 *.key
 id_rsa*
 *.private-key*
+
+# ── Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+db.sqlite3
