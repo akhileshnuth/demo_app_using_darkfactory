@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Subjects — Vault{% endblock %}
+
+{% block content %}
+<h1>Subjects</h1>
+<p><a href="{% url 'vault:subject_create' %}">Add subject</a></p>
+
+{% if messages %}
+  {% for message in messages %}
+    <p class="error">{{ message }}</p>
+  {% endfor %}
+{% endif %}
+
+{% if subjects %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for subj in subjects %}
+    <tr>
+      <td>{{ subj.name }}</td>
+      <td>{{ subj.description|default:"—" }}</td>
+      <td>
+        <a href="{% url 'vault:subject_update' subj.pk %}">Edit</a>
+        <a href="{% url 'vault:subject_delete' subj.pk %}">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No subjects yet.</p>
+{% endif %}
+
+<p><a href="{% url 'vault:document_list' %}">Back to documents</a></p>
+{% endblock %}

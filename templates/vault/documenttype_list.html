@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Document Types — Vault{% endblock %}
+
+{% block content %}
+<h1>Document Types</h1>
+<p><a href="{% url 'vault:documenttype_create' %}">Add document type</a></p>
+
+{% if messages %}
+  {% for message in messages %}
+    <p class="error">{{ message }}</p>
+  {% endfor %}
+{% endif %}
+
+{% if document_types %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dt in document_types %}
+    <tr>
+      <td>{{ dt.name }}</td>
+      <td>{{ dt.description|default:"—" }}</td>
+      <td>
+        <a href="{% url 'vault:documenttype_update' dt.pk %}">Edit</a>
+        <a href="{% url 'vault:documenttype_delete' dt.pk %}">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No document types yet.</p>
+{% endif %}
+
+<p><a href="{% url 'vault:document_list' %}">Back to documents</a></p>
+{% endblock %}
