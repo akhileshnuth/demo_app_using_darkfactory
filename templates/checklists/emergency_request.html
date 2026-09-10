@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency access requests{% endblock %}
+
+{% block content %}
+<h1>Emergency access requests</h1>
+
+{% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <p class="{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<p class="help-text">As a designated emergency contact you may request access to the
+owner's checklists if they fail to respond within the configured window.</p>
+
+{% if contexts %}
+  <ul class="contact-list">
+    {% for entry in contexts %}
+      <li class="contact-row">
+        <span class="owner-name">
+          {{ entry.owner.display_name|default:entry.owner.email }}
+        </span>
+        <span class="request-status">
+          {% if entry.status == 'approved' %}
+            Access approved.
+          {% elif entry.status == 'auto_granted' %}
+            Access auto-granted.
+          {% elif entry.status == 'denied' %}
+            Request denied.
+          {% elif entry.status == 'cancelled' %}
+            Request cancelled.
+          {% elif entry.status == 'pending' %}
+            Request pending approval.
+          {% else %}
+            No request yet.
+          {% endif %}
+        </span>
+        {% if entry.status != 'approved' and entry.status != 'auto_granted' %}
+          <form method="post" action="{% url 'emergency_request_create' entry.owner.pk %}" class="inline-form">
+            {% csrf_token %}
+            <button type="submit">Request access</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty">You are not a designated emergency contact for anyone yet.</p>
+{% endif %}
+{% endblock %}

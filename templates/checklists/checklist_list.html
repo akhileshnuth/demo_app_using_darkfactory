@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}My Checklists{% endblock %}
+
+{% block content %}
+<h1>My Checklists</h1>
+<p><a href="{% url 'checklist_new' %}" class="action-link">+ New Checklist</a></p>
+
+{% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <p class="{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if checklists %}
+  <ul class="checklist-list">
+    {% for checklist in checklists %}
+      <li class="checklist-item">
+        <a href="{% url 'checklist_detail' checklist.pk %}">{{ checklist.title }}</a>
+        <span class="item-meta">
+          {{ checklist.item_count }} item{{ checklist.item_count|pluralize }} ·
+          {{ checklist.completion_percentage }}% complete
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if is_paginated %}
+    <div class="pagination">
+      <span class="step-links">
+        {% if page_obj.has_previous %}
+          <a href="?page=1">&laquo; first</a>
+          <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+        {% endif %}
+        <span class="current">
+          Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}">next</a>
+          <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+      </span>
+    </div>
+  {% endif %}
+{% else %}
+  <p class="empty">You don't have any checklists yet. <a href="{% url 'checklist_new' %}">Create one</a>.</p>
+{% endif %}
+{% endblock %}

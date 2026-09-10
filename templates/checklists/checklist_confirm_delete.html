@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Checklist{% endblock %}
+
+{% block content %}
+<h1>Delete Checklist</h1>
+<p>Are you sure you want to delete "{{ checklist.title }}"? This will also remove all
+of its items and any sharing relationships, and notify recipients.</p>
+<form method="post" action="{% url 'checklist_delete' checklist.pk %}">
+  {% csrf_token %}
+  <button type="submit" class="danger">Delete checklist</button>
+  <a href="{% url 'checklist_detail' checklist.pk %}" class="action-link">Cancel</a>
+</form>
+{% endblock %}

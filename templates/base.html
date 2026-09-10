@@ -13,8 +13,10 @@
     <nav aria-label="Main navigation">
       <ul>
         <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-        <li><a href="{% url 'vault:category_list' %}">Vault</a></li>
-        <li><a href="{% url 'vault:document_list' %}">Documents</a></li>
+        <li><a href="{% url 'checklist_list' %}">Checklists</a></li>
+        <li><a href="{% url 'checklist_shared' %}">Shared with me</a></li>
+        <li><a href="{% url 'emergency' %}">Emergency access</a></li>
+        <li><a href="{% url 'notifications' %}">Notifications</a></li>
         <li><a href="{% url 'profile' %}">Profile</a></li>
       </ul>
     </nav>
@@ -23,10 +25,18 @@
     <header id="header" class="header">
       <span class="display-name">{{ user.display_name|default:user.email }}</span>
       {% if user.is_authenticated %}
-      <form method="post" action="{% url 'logout' %}" class="logout-form">
-        {% csrf_token %}
-        <button type="submit">Log out</button>
-      </form>
+      <span class="header-actions">
+        <a href="{% url 'notifications' %}" class="badge-link">
+          Notifications
+          {% if unread_notifications %}
+          <span class="badge" title="{{ unread_notifications }} unread">{{ unread_notifications }}</span>
+          {% endif %}
+        </a>
+        <form method="post" action="{% url 'logout' %}" class="logout-form">
+          {% csrf_token %}
+          <button type="submit">Log out</button>
+        </form>
+      </span>
       {% endif %}
     </header>
     <main id="main" class="main">

@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "accounts",
     "dashboard",
-    "vault",
+    "checklists",
 ]
 
 MIDDLEWARE = [
@@ -53,6 +53,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "checklists.context_processors.unread_notifications",
             ],
         },
     },
@@ -107,3 +108,25 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+# DFT-9: emergency access auto-grant window in hours (FR-011). Not user-facing.
+CLA_OK_EMERGENCY_AUTO_GRANT_HOURS = 72
+
+# DFT-9: code-defined quick-start checklist templates (FR-017). No admin UI.
+CLA_OK_TEMPLATES = {
+    "Grocery List": ["Milk", "Eggs", "Bread", "Coffee", "Butter"],
+    "Travel Packing": [
+        "Passport / ID",
+        "Toiletries",
+        "Chargers",
+        "Medications",
+        "Comfortable shoes",
+    ],
+    "Meeting Agenda": [
+        "Welcome & introductions",
+        "Review previous action items",
+        "New business",
+        "Decisions & owners",
+        "Next steps & wrap-up",
+    ],
+}
