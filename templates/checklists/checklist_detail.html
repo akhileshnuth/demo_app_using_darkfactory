@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ checklist.title }}{% endblock %}
+
+{% block content %}
+{% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <p class="{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<h1>{{ checklist.title }}</h1>
+
+{% if not is_owner %}
+  <p class="shared-by">Shared by {{ shared_by }} (read-only)</p>
+{% endif %}
+
+<div class="stats">
+  <span class="item-count">{{ checklist.item_count }} item{{ checklist.item_count|pluralize }}</span>
+  <span class="completion">{{ checklist.completion_percentage }}% complete</span>
+</div>
+
+{% if is_owner %}
+  <p>
+    <a href="{% url 'checklist_share' checklist.pk %}" class="action-link">Manage sharing</a>
+    <a href="{% url 'checklist_delete' checklist.pk %}" class="action-link danger">Delete checklist</a>
+  </p>
+
+  <form method="post" action="{% url 'checklist_item_create' checklist.pk %}" class="add-item-form">
+    {% csrf_token %}
+    <div class="form-field{% if item_form.text.errors %} has-errors{% endif %}">
+      {{ item_form.text.label_tag }}
+      {{ item_form.text }}
+      {% for error in item_form.text.errors %}
+        <span class="error">{{ error }}</span>
+      {% endfor %}
+    </div>
+    <button type="submit">Add item</button>
+  </form>
+{% endif %}
+
+<ul class="item-list">
+  {% for item in checklist.items.all %}
+    <li class="item {% if item.is_complete %}done{% endif %}">
+      {% if is_owner %}
+        <form method="post" action="{% url 'checklist_item_toggle' checklist.pk item.pk %}" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" class="toggle" title="Toggle completion">
+            {% if item.is_complete %}☑{% else %}☐{% endif %}
+          </button>
+        </form>
+      {% endif %}
+      {% if item.is_complete %}<s>{{ item.text }}</s>{% else %}<span>{{ item.text }}</span>{% endif %}
+
+      {% if is_owner %}
+        <form method="post" action="{% url 'checklist_item_edit' checklist.pk item.pk %}" class="inline-form edit-form">
+          {% csrf_token %}
+          <input type="text" name="text" value="{{ item.text }}" maxlength="200">
+          <button type="submit">Save</button>
+        </form>
+        <form method="post" action="{% url 'checklist_item_delete' checklist.pk item.pk %}" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li class="empty">No items yet.</li>
+  {% endfor %}
+</ul>
+
+<p><a href="{% url 'checklist_list' %}" class="action-link">Back to my checklists</a></p>
+{% endblock %}

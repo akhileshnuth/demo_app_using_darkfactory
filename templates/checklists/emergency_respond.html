@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Respond to emergency request{% endblock %}
+
+{% block content %}
+<h1>Emergency access request</h1>
+
+{% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <p class="{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<p><strong>{{ emergency_request.requester.display_name|default:emergency_request.requester.email }}</strong>
+is requesting emergency access to your checklists.</p>
+
+<p class="request-status">Status: {{ emergency_request.get_status_display }}.</p>
+
+{% if emergency_request.status == 'pending' %}
+  <form method="post" action="{% url 'emergency_approve' emergency_request.pk %}" class="inline-form">
+    {% csrf_token %}
+    <button type="submit">Approve access</button>
+  </form>
+  <form method="post" action="{% url 'emergency_deny' emergency_request.pk %}" class="inline-form">
+    {% csrf_token %}
+    <button type="submit" class="danger">Deny access</button>
+  </form>
+{% endif %}
+
+<p><a href="{% url 'emergency' %}" class="action-link">Back to emergency access</a></p>
+{% endblock %}
