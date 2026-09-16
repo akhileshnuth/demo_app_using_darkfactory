@@ -7,6 +7,7 @@ built-in authentication stack with a minimal custom User model keyed on
 email (see ``accounts.models.User``).
 """
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,7 @@ INSTALLED_APPS = [
     "accounts",
     "dashboard",
     "checklists",
+    "vault",
 ]
 
 MIDDLEWARE = [
@@ -130,3 +132,25 @@ CLA_OK_TEMPLATES = {
         "Next steps & wrap-up",
     ],
 }
+
+# DFT-13: expiry reminders run from a scheduled management command
+# (``manage.py send_expiry_reminders``), not from dashboard page loads.
+# Documents with an expiry date inside this many days are reminded by email.
+# The window can also be overridden per run with the command's ``--days``
+# option.
+EXPIRE_REMINDER_DAYS = 30
+
+# DFT-13: real SMTP transport for reminder emails. Values come from the
+# environment so each deployment supplies its own mail relay; localhost:25
+# remains the fallback for a self-hosted setup. During tests Django replaces
+# this backend with the in-memory ``locmem`` backend automatically.
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "false").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", "Vault Reminders <noreply@localhost>"
+)
