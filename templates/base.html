@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Scaffold{% endblock %}</title>
+  <title>{% block title %}Scaffold  <footer>
+    © 2026 Personal Document Vault
+  </footer>
+{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
 </head>
 <body>
@@ -40,10 +43,16 @@
       {% endif %}
     </header>
     <main id="main" class="main">
-      {% block content %}{% endblock %}
+      {% block content %}  <footer>
+    © 2026 Personal Document Vault
+  </footer>
+{% endblock %}
     </main>
   </div>
 </div>
+  <footer>
+    © 2026 Personal Document Vault
+  </footer>
 {% endblock %}
 </body>
 </html>
