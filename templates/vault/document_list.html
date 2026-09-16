@@ -3,7 +3,17 @@
 {% block title %}Documents — Vault{% endblock %}
 
 {% block content %}
-<h1>Documents</h1>
+<header>
+    <h1>Documents</h1>
+    <nav>
+        <ul>
+            <li><a href="{% url 'vault:document_create' %}">Add document</a></li>
+            <li><a href="{% url 'vault:category_list' %}">Categories</a></li>
+            <li><a href="{% url 'vault:subject_list' %}">Subjects</a></li>
+            <li><a href="{% url 'vault:documenttype_list' %}">Document Types</a></li>
+        </ul>
+    </nav>
+</header>
 <p>
   <a href="{% url 'vault:document_create' %}">Add document</a> |
   <a href="{% url 'vault:category_list' %}">Categories</a> |
