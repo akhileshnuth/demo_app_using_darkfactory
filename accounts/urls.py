@@ -2,7 +2,8 @@
 
 Routes are defined with explicit paths so the authentication surface
 (``/accounts/signup/``, ``/accounts/login/``, ``/accounts/logout/``) and the
-profile page (``/profile/``) both live here, matching the web contracts.
+profile/activity pages (``/profile/``, ``/profile/activity/``) both live
+here, matching the web contracts.
 """
 
 from django.contrib.auth.views import LogoutView
@@ -15,4 +16,9 @@ urlpatterns = [
     path("accounts/login/", views.LoginView.as_view(), name="login"),
     path("accounts/logout/", LogoutView.as_view(), name="logout"),
     path("profile/", views.ProfileView.as_view(), name="profile"),
+    path(
+        "profile/activity/",
+        views.ActivityView.as_view(),
+        name="activity",
+    ),
 ]

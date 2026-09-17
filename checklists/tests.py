@@ -3,14 +3,19 @@
 Covers checklist CRUD + completion statistics (SC-001, SC-005), sharing with
 read-only enforcement and revocation (SC-002, SC-006), the emergency access
 flow including auto-grant (SC-003), the notification center + unread badge
-(SC-004, SC-007), and authorization (FR-019, FR-020, SC-006). Uses Django's
+(SC-004, SC-007), authorization (FR-019, FR-020, SC-006), and recording of
+security-relevant events to the activity log (DFT-14). Uses Django's
 bundled test runner with the in-memory SQLite test database.
 """
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
+from accounts.models import ActivityLog
+
+from . import services
 from .models import (
     Checklist,
     ChecklistItem,
@@ -610,3 +615,125 @@ class AuthorizationTests(TestCase):
             reverse("emergency_respond", args=[request_obj.pk])
         )
         self.assertEqual(response.status_code, 403)
+
+
+class ActivityRecordingTests(TestCase):
+    """Security-relevant events are recorded to the activity log (DFT-14)."""
+
+    def setUp(self):
+        self.owner = _new_user("owner@example.com", display_name="Owner")
+        self.contact = _new_user("contact@example.com", display_name="Contact")
+        self.checklist = Checklist.objects.create(owner=self.owner, title="Important")
+
+    def _login(self, email):
+        self.client.login(email=email, password="Sup3r-secret!")
+
+    def test_share_creation_records_activity_for_owner(self):
+        self._login("owner@example.com")
+        self.client.post(
+            reverse("checklist_share", args=[self.checklist.pk]),
+            {"email": "contact@example.com"},
+        )
+        entry = ActivityLog.objects.get(
+            user=self.owner, event_type=ActivityLog.EventType.SHARE_CREATED
+        )
+        self.assertIn("Important", entry.description)
+        self.assertIn("contact@example.com", entry.description)
+
+    def test_share_access_records_activity_for_viewer(self):
+        self._login("owner@example.com")
+        self.client.post(
+            reverse("checklist_share", args=[self.checklist.pk]),
+            {"email": "contact@example.com"},
+        )
+        self.client.post(reverse("logout"))
+        self._login("contact@example.com")
+        response = self.client.get(
+            reverse("checklist_detail", args=[self.checklist.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        entry = ActivityLog.objects.get(
+            user=self.contact, event_type=ActivityLog.EventType.SHARE_ACCESSED
+        )
+        self.assertIn("Important", entry.description)
+
+    def test_share_revoke_records_activity_for_owner(self):
+        self._login("owner@example.com")
+        self.client.post(
+            reverse("checklist_share", args=[self.checklist.pk]),
+            {"email": "contact@example.com"},
+        )
+        share = ChecklistShare.objects.get(
+            checklist=self.checklist, recipient=self.contact
+        )
+        self.client.post(
+            reverse("checklist_share_revoke", args=[self.checklist.pk, share.pk])
+        )
+        entry = ActivityLog.objects.get(
+            user=self.owner, event_type=ActivityLog.EventType.SHARE_REVOKED
+        )
+        self.assertIn("Important", entry.description)
+        self.assertIn("contact@example.com", entry.description)
+
+    def test_emergency_request_records_activity_for_requester(self):
+        EmergencyContact.objects.create(owner=self.owner, contact=self.contact)
+        self._login("contact@example.com")
+        self.client.post(reverse("emergency_request_create", args=[self.owner.pk]))
+        entry = ActivityLog.objects.get(
+            user=self.contact,
+            event_type=ActivityLog.EventType.EMERGENCY_REQUESTED,
+        )
+        self.assertIn("owner@example.com", entry.description)
+
+    def test_emergency_approve_records_activity_for_owner(self):
+        EmergencyContact.objects.create(owner=self.owner, contact=self.contact)
+        request_obj = EmergencyAccessRequest.objects.create(
+            owner=self.owner,
+            requester=self.contact,
+            status=EmergencyAccessRequest.STATUS_PENDING,
+            timeout_deadline=timezone.now() + timezone.timedelta(hours=1),
+        )
+        self._login("owner@example.com")
+        self.client.post(reverse("emergency_approve", args=[request_obj.pk]))
+        entry = ActivityLog.objects.get(
+            user=self.owner,
+            event_type=ActivityLog.EventType.EMERGENCY_GRANTED,
+        )
+        self.assertIn("Contact", entry.description)
+
+    def test_emergency_deny_records_activity_for_owner(self):
+        EmergencyContact.objects.create(owner=self.owner, contact=self.contact)
+        request_obj = EmergencyAccessRequest.objects.create(
+            owner=self.owner,
+            requester=self.contact,
+            status=EmergencyAccessRequest.STATUS_PENDING,
+            timeout_deadline=timezone.now() + timezone.timedelta(hours=1),
+        )
+        self._login("owner@example.com")
+        self.client.post(reverse("emergency_deny", args=[request_obj.pk]))
+        entry = ActivityLog.objects.get(
+            user=self.owner,
+            event_type=ActivityLog.EventType.EMERGENCY_DENIED,
+        )
+        self.assertIn("Contact", entry.description)
+
+    def test_auto_grant_records_activity_for_owner(self):
+        EmergencyContact.objects.create(owner=self.owner, contact=self.contact)
+        request_obj = EmergencyAccessRequest.objects.create(
+            owner=self.owner,
+            requester=self.contact,
+            status=EmergencyAccessRequest.STATUS_PENDING,
+            timeout_deadline=timezone.now() - timezone.timedelta(hours=1),
+        )
+        # Lazy auto-grant triggers on read of an expired pending request.
+        services._auto_grant_if_expired(request_obj)
+        request_obj.refresh_from_db()
+        self.assertEqual(
+            request_obj.status, EmergencyAccessRequest.STATUS_AUTO_GRANTED
+        )
+        self.assertTrue(
+            ActivityLog.objects.filter(
+                user=self.owner,
+                event_type=ActivityLog.EventType.EMERGENCY_GRANTED,
+            ).exists()
+        )

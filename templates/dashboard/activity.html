@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Activity{% endblock %}
+
+{% block content %}
+<h1>Activity</h1>
+<p class="activity-note">Recent security-relevant events on your account.</p>
+
+{% if activities %}
+  <ul class="activity-list">
+    {% for entry in activities %}
+      <li class="activity-entry">
+        <span class="activity-type">{{ entry.get_event_type_display }}</span>
+        <span class="activity-description">{{ entry.description }}</span>
+        <span class="activity-time">{{ entry.created_at|date:"Y-m-d H:i" }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if is_paginated %}
+    <div class="pagination">
+      <span class="step-links">
+        {% if page_obj.has_previous %}
+          <a href="?page=1">&laquo; first</a>
+          <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+        {% endif %}
+        <span class="current">
+          Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}">next</a>
+          <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+      </span>
+    </div>
+  {% endif %}
+{% else %}
+  <p class="empty">No activity recorded yet.</p>
+{% endif %}
+
+<p><a href="{% url 'profile' %}" class="action-link">Back to account settings</a></p>
+{% endblock %}

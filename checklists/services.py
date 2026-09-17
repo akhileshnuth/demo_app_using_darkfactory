@@ -7,11 +7,15 @@ the FR-019/FR-020/SC-006 guarantees are enforced in one place:
 - Notification creation (``notify``) and the unread badge count.
 - Emergency request/approve/deny/auto-grant and contact-removal cascades.
 - Share creation/revocation with notification side effects.
+- Security-relevant events are recorded to ``accounts.ActivityLog`` (DFT-14)
+  so each user can review their own activity.
 """
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+
+from accounts.models import ActivityLog
 
 from .models import (
     ChecklistShare,
@@ -113,6 +117,14 @@ def share_checklist(checklist, recipient):
         if created:
             share.status = ChecklistShare.STATUS_ACTIVE
             share.save(update_fields=["status"])
+            ActivityLog.objects.create(
+                user=checklist.owner,
+                event_type=ActivityLog.EventType.SHARE_CREATED,
+                description=(
+                    f"Shared checklist '{checklist.title}' with "
+                    f"{recipient.email}."
+                ),
+            )
         return share, created
     share = ChecklistShare.objects.create(
         checklist=checklist, recipient=recipient, status=ChecklistShare.STATUS_ACTIVE
@@ -125,6 +137,13 @@ def share_checklist(checklist, recipient):
         checklist=checklist,
         share=share,
     )
+    ActivityLog.objects.create(
+        user=checklist.owner,
+        event_type=ActivityLog.EventType.SHARE_CREATED,
+        description=(
+            f"Shared checklist '{checklist.title}' with {recipient.email}."
+        ),
+    )
     return share, True
 
 
@@ -134,6 +153,14 @@ def revoke_share(share):
         return
     share.status = ChecklistShare.STATUS_REVOKED
     share.save(update_fields=["status"])
+    ActivityLog.objects.create(
+        user=share.checklist.owner,
+        event_type=ActivityLog.EventType.SHARE_REVOKED,
+        description=(
+            f"Revoked sharing of checklist '{share.checklist.title}' "
+            f"with {share.recipient.email}."
+        ),
+    )
     notify(
         share.recipient,
         Notification.TYPE_REVOCATION,
@@ -182,6 +209,14 @@ def _auto_grant_if_expired(request_obj):
                 "did not respond.",
                 request=request_obj,
             )
+            ActivityLog.objects.create(
+                user=request_obj.owner,
+                event_type=ActivityLog.EventType.EMERGENCY_GRANTED,
+                description=(
+                    f"Emergency access was auto-granted to "
+                    f"{request_obj.requester.display_name or request_obj.requester.email}."
+                ),
+            )
             return True
     return False
 
@@ -222,6 +257,11 @@ def request_emergency_access(contact, owner):
         "to your checklists.",
         request=request_obj,
     )
+    ActivityLog.objects.create(
+        user=contact,
+        event_type=ActivityLog.EventType.EMERGENCY_REQUESTED,
+        description=f"Requested emergency access to {owner.email}'s checklists.",
+    )
     return request_obj
 
 
@@ -243,6 +283,14 @@ def approve_emergency_request(request_obj):
         f"{request_obj.requester.display_name or request_obj.requester.email}.",
         request=request_obj,
     )
+    ActivityLog.objects.create(
+        user=request_obj.owner,
+        event_type=ActivityLog.EventType.EMERGENCY_GRANTED,
+        description=(
+            f"Approved emergency access for "
+            f"{request_obj.requester.display_name or request_obj.requester.email}."
+        ),
+    )
     return True
 
 
@@ -256,6 +304,14 @@ def deny_emergency_request(request_obj):
         Notification.TYPE_EMERGENCY_RESPONSE,
         f"{request_obj.owner.email} denied your emergency access request.",
         request=request_obj,
+    )
+    ActivityLog.objects.create(
+        user=request_obj.owner,
+        event_type=ActivityLog.EventType.EMERGENCY_DENIED,
+        description=(
+            f"Denied emergency access for "
+            f"{request_obj.requester.display_name or request_obj.requester.email}."
+        ),
     )
     return True
 
