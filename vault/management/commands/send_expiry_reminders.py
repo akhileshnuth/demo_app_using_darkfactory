@@ -41,7 +41,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        days = options["days"] or getattr(settings, "EXPIRE_REMINDER_DAYS", 30)
+        # ``--days 0`` is a valid window (today/expired only), so fall back
+        # to the setting only when the option was not supplied at all.
+        days = options["days"]
+        if days is None:
+            days = getattr(settings, "EXPIRE_REMINDER_DAYS", 30)
         today = timezone.localdate()
         upper_bound = today + timedelta(days=days)
 
