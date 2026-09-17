@@ -188,6 +188,21 @@ class SendExpiryRemindersCommandTests(TestCase):
         call_command("send_expiry_reminders", days=7)
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_days_zero_only_flags_today_and_already_expired(self):
+        """``--days 0`` means 'today or already expired', never the default."""
+        owner = _user()
+        _document(owner, expiry=timezone.localdate(), title="Due today")
+        _document(
+            owner,
+            expiry=timezone.localdate() + datetime.timedelta(days=1),
+            title="Due tomorrow",
+        )
+
+        call_command("send_expiry_reminders", days=0)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Due today", mail.outbox[0].subject)
+        self.assertNotIn("Due tomorrow", mail.outbox[0].subject)
+
     # -- user login independence ---------------------------------------------
 
     def test_sends_for_user_who_never_logged_in(self):
@@ -286,3 +301,19 @@ class SendExpiryRemindersCommandTests(TestCase):
         call_command("send_expiry_reminders")
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Card A", mail.outbox[0].subject)
+
+    # -- real email transport (DFT-13 acceptance) ----------------------------
+
+    def test_configured_email_backend_is_smtp(self):
+        """Reminders send through a real SMTP backend, not the console backend.
+
+        The test runner swaps the live ``settings`` object to the in-memory
+        locmem backend, so assert on the module constant that the project is
+        actually configured with.
+        """
+        import config.settings as project_settings
+
+        self.assertEqual(
+            project_settings.EMAIL_BACKEND,
+            "django.core.mail.backends.smtp.EmailBackend",
+        )
