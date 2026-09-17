@@ -89,3 +89,34 @@ class Profile(models.Model):
     def display_name(self):
         """Read-only display name, delegated to the user account (R3)."""
         return self.user.display_name
+
+
+class ActivityLog(models.Model):
+    """Audit trail of a user's security-relevant events (DFT-14).
+
+    Records login, share create/access/revoke, and emergency access
+    request/grant/deny events so a user can review their own recent
+    activity from the Activity page under account settings.
+    """
+
+    class EventType(models.TextChoices):
+        LOGIN = "login", "Login"
+        SHARE_CREATED = "share_created", "Share created"
+        SHARE_ACCESSED = "share_accessed", "Share accessed"
+        SHARE_REVOKED = "share_revoked", "Share revoked"
+        EMERGENCY_REQUESTED = "emergency_requested", "Emergency requested"
+        EMERGENCY_GRANTED = "emergency_granted", "Emergency granted"
+        EMERGENCY_DENIED = "emergency_denied", "Emergency denied"
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="activity_logs"
+    )
+    event_type = models.CharField(max_length=30, choices=EventType.choices)
+    description = models.CharField(max_length=280)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_event_type_display()}: {self.description}"

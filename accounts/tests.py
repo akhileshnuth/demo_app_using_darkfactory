@@ -1,16 +1,16 @@
 """Tests for the accounts app.
 
 Covers signup (FR-001, FR-008, FR-009, FR-010), login/logout (FR-002,
-FR-003), profile editing (FR-005), access control (FR-007) and CSRF
-protection (FR-011). Uses Django's bundled test runner with the in-memory
-SQLite test database.
+FR-003), profile editing (FR-005), access control (FR-007), CSRF
+protection (FR-011), and the per-user activity log (DFT-14). Uses Django's
+bundled test runner with the in-memory SQLite test database.
 """
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .models import Profile
+from .models import ActivityLog, Profile
 
 User = get_user_model()
 
@@ -252,3 +252,72 @@ class UserManagerTests(TestCase):
         )
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
+
+
+class ActivityLogTests(TestCase):
+    """Activity-log recording and per-user visibility (DFT-14)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="ada@example.com",
+            password="Sup3r-secret!",
+            display_name="Ada",
+        )
+        self.other = User.objects.create_user(
+            email="grace@example.com",
+            password="Sup3r-secret!",
+        )
+
+    def test_login_records_activity(self):
+        self.client.post(
+            reverse("login"),
+            {"username": "ada@example.com", "password": "Sup3r-secret!"},
+        )
+        entry = ActivityLog.objects.get(user=self.user)
+        self.assertEqual(entry.event_type, ActivityLog.EventType.LOGIN)
+        self.assertIsNotNone(entry.created_at)
+        self.assertTrue(entry.description)
+
+    def test_login_with_wrong_password_records_nothing(self):
+        self.client.post(
+            reverse("login"),
+            {"username": "ada@example.com", "password": "wrong-password"},
+        )
+        self.assertEqual(ActivityLog.objects.count(), 0)
+
+    def test_activity_page_requires_login(self):
+        response = self.client.get(reverse("activity"))
+        self.assertRedirects(
+            response, reverse("login") + "?next=" + reverse("activity")
+        )
+
+    def test_activity_page_lists_own_events(self):
+        ActivityLog.objects.create(
+            user=self.user,
+            event_type=ActivityLog.EventType.SHARE_CREATED,
+            description=(
+                "Shared a checklist with grace@example.com (Grocery Run)."
+            ),
+        )
+        ActivityLog.objects.create(
+            user=self.user,
+            event_type=ActivityLog.EventType.LOGIN,
+            description="Signed in.",
+        )
+        self.client.login(email="ada@example.com", password="Sup3r-secret!")
+        response = self.client.get(reverse("activity"))
+        self.assertContains(response, "Shared a checklist with grace@example.com")
+        self.assertContains(response, "Grocery Run")
+        self.assertContains(response, "Signed in.")
+
+    def test_activity_page_never_shows_another_users_events(self):
+        ActivityLog.objects.create(
+            user=self.other,
+            event_type=ActivityLog.EventType.LOGIN,
+            description="Signed in.",
+        )
+        self.client.login(email="ada@example.com", password="Sup3r-secret!")
+        response = self.client.get(reverse("activity"))
+        # Grace's event is neither rendered nor returned by the queryset.
+        self.assertNotContains(response, "Signed in.")
+        self.assertEqual(response.context["activities"].count(), 0)

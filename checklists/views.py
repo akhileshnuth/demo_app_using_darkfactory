@@ -1,9 +1,11 @@
-"""Views for checklists, sharing, emergency access and notifications.
+"""Views for checklists, sharing, emergency access, notifications and the
+activity log.
 
 All feature endpoints require authentication (FR-019) via ``LoginRequiredMixin``.
 Resource access is gated by ``services.can_view``/``can_edit``/``can_respond_to_request``
 (FR-020, SC-006): a user who cannot view a checklist gets a 404 rather than data
-leakage.
+leakage. Opening a checklist shared with a non-owner is recorded in their
+activity log (DFT-14).
 """
 
 from django.contrib import messages
@@ -20,6 +22,8 @@ from django.views.generic import (
     TemplateView,
     View,
 )
+
+from accounts.models import ActivityLog
 
 from . import services
 from .forms import (
@@ -101,7 +105,16 @@ class ChecklistDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "checklist"
 
     def get_object(self, queryset=None):
-        return _checklist_or_404_view(self.request.user, self.kwargs["pk"])
+        checklist = _checklist_or_404_view(self.request.user, self.kwargs["pk"])
+        if not services.can_edit(self.request.user, checklist):
+            # A non-owner (share recipient or emergency grantee) accessed the
+            # checklist: record the access on their own activity log (DFT-14).
+            ActivityLog.objects.create(
+                user=self.request.user,
+                event_type=ActivityLog.EventType.SHARE_ACCESSED,
+                description=f"Opened shared checklist '{checklist.title}'.",
+            )
+        return checklist
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
