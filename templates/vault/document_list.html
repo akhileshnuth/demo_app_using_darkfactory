@@ -7,18 +7,22 @@
     <h1>Documents</h1>
     <nav>
         <ul>
-            <li><a href="{% url 'vault:document_create' %}">Add document</a></li>
-            <li><a href="{% url 'vault:category_list' %}">Categories</a></li>
-            <li><a href="{% url 'vault:subject_list' %}">Subjects</a></li>
-            <li><a href="{% url 'vault:documenttype_list' %}">Document Types</a></li>
+            {% url 'vault:document_create' as document_create_url %}
+            {% url 'vault:category_list' as category_list_url %}
+            {% url 'vault:subject_list' as subject_list_url %}
+            {% url 'vault:documenttype_list' as documenttype_list_url %}
+            {% if document_create_url %}<li><a href="{{ document_create_url }}">Add document</a></li>{% endif %}
+            {% if category_list_url %}<li><a href="{{ category_list_url }}">Categories</a></li>{% endif %}
+            {% if subject_list_url %}<li><a href="{{ subject_list_url }}">Subjects</a></li>{% endif %}
+            {% if documenttype_list_url %}<li><a href="{{ documenttype_list_url }}">Document Types</a></li>{% endif %}
         </ul>
     </nav>
 </header>
 <p>
-  <a href="{% url 'vault:document_create' %}">Add document</a> |
-  <a href="{% url 'vault:category_list' %}">Categories</a> |
-  <a href="{% url 'vault:subject_list' %}">Subjects</a> |
-  <a href="{% url 'vault:documenttype_list' %}">Document Types</a>
+  {% if document_create_url %}<a href="{{ document_create_url }}">Add document</a> |{% endif %}
+  {% if category_list_url %}<a href="{{ category_list_url }}">Categories</a> |{% endif %}
+  {% if subject_list_url %}<a href="{{ subject_list_url }}">Subjects</a> |{% endif %}
+  {% if documenttype_list_url %}<a href="{{ documenttype_list_url }}">Document Types</a>{% endif %}
 </p>
 
 <form method="get" action="" class="filter-form" style="margin-bottom:1rem;">
@@ -78,14 +82,17 @@
   <tbody>
     {% for doc in documents %}
     <tr>
-      <td><a href="{% url 'vault:document_detail' doc.pk %}">{{ doc.title }}</a></td>
+      {% url 'vault:document_detail' doc.pk as document_detail_url %}
+      {% url 'vault:document_update' doc.pk as document_update_url %}
+      {% url 'vault:document_delete' doc.pk as document_delete_url %}
+      <td>{% if document_detail_url %}<a href="{{ document_detail_url }}">{{ doc.title }}</a>{% else %}{{ doc.title }}{% endif %}</td>
       <td>{{ doc.category.name }}</td>
       <td>{{ doc.subject.name }}</td>
       <td>{{ doc.document_type.name }}</td>
-      <td>{{ doc.updated_at }}</td>
+       <td>{{ doc.updated_at|stringformat:"s" }}</td>
       <td>
-        <a href="{% url 'vault:document_update' doc.pk %}">Edit</a>
-        <a href="{% url 'vault:document_delete' doc.pk %}">Delete</a>
+        {% if document_update_url %}<a href="{{ document_update_url }}">Edit</a>{% endif %}
+        {% if document_delete_url %}<a href="{{ document_delete_url }}">Delete</a>{% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -93,5 +100,25 @@
 </table>
 {% else %}
 <p>No documents found.</p>
+{% endif %}
+
+{% if is_paginated and paginator.num_pages > 1 %}
+<nav aria-label="Document pages" class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?page=1{% if pagination_query %}&amp;{{ pagination_query }}{% endif %}" aria-label="First page">First</a>
+    <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&amp;{{ pagination_query }}{% endif %}" aria-label="Previous page">Previous</a>
+  {% else %}
+    <span aria-disabled="true">First</span>
+    <span aria-disabled="true">Previous</span>
+  {% endif %}
+  <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&amp;{{ pagination_query }}{% endif %}" aria-label="Next page">Next</a>
+    <a href="?page={{ paginator.num_pages }}{% if pagination_query %}&amp;{{ pagination_query }}{% endif %}" aria-label="Last page">Last</a>
+  {% else %}
+    <span aria-disabled="true">Next</span>
+    <span aria-disabled="true">Last</span>
+  {% endif %}
+</nav>
 {% endif %}
 {% endblock %}
