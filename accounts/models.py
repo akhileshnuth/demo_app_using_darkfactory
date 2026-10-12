@@ -107,6 +107,10 @@ class ActivityLog(models.Model):
         EMERGENCY_REQUESTED = "emergency_requested", "Emergency requested"
         EMERGENCY_GRANTED = "emergency_granted", "Emergency granted"
         EMERGENCY_DENIED = "emergency_denied", "Emergency denied"
+        TWO_FACTOR_ENABLED = "two_factor_enabled", "Two-factor enabled"
+        TWO_FACTOR_VERIFIED = "two_factor_verified", "Two-factor verified"
+        TWO_FACTOR_FAILED = "two_factor_failed", "Two-factor verification failed"
+        TWO_FACTOR_DISABLED = "two_factor_disabled", "Two-factor disabled"
 
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="activity_logs"
@@ -120,3 +124,51 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.get_event_type_display()}: {self.description}"
+
+
+class TwoFactorAuth(models.Model):
+    """The current authenticator-app factor for an account."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="two_factor")
+    secret = models.CharField(max_length=255)
+    enabled = models.BooleanField(default=False)
+    failed_attempts = models.PositiveIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class TwoFactorEnrollment(models.Model):
+    """A short-lived factor enrollment unusable until verified."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="two_factor_enrollments")
+    secret = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BackupCode(models.Model):
+    """A single-use, hashed recovery code."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="backup_codes")
+    code_hash = models.CharField(max_length=128)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+
+class TwoFactorRecoveryRequest(models.Model):
+    """Support-mediated recovery awaiting staff identity review."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="two_factor_recovery_requests")
+    email_verified = models.BooleanField(default=False)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    reviewed_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_two_factor_recoveries"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)

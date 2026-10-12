@@ -96,3 +96,14 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ("display_name",)
+
+
+class TwoFactorCodeForm(forms.Form):
+    """A six-digit authenticator or one-time backup code."""
+
+    code = forms.CharField(
+        label="Verification code",
+        max_length=20,
+        strip=True,
+        widget=forms.TextInput(attrs={"autocomplete": "one-time-code"}),
+    )
