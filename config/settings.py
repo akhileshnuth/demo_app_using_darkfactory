@@ -154,3 +154,10 @@ EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
 DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL", "Vault Reminders <noreply@localhost>"
 )
+
+# DFT-17: never place document bytes below a static or public media root.
+PRIVATE_DOCUMENT_ROOT = Path(
+    os.environ.get("PRIVATE_DOCUMENT_ROOT", BASE_DIR / "private_documents")
+)
+MEDIA_ROOT = PRIVATE_DOCUMENT_ROOT
+DOCUMENT_UPLOAD_MAX_BYTES = int(os.environ.get("DOCUMENT_UPLOAD_MAX_BYTES", 10 * 1024 * 1024))

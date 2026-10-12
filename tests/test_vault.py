@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from accounts.models import ActivityLog
 from vault.forms import CategoryForm, DocumentForm
 from vault.models import Category, Document, DocumentType, Subject
 
@@ -80,3 +82,62 @@ class VaultFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/zip")
+
+
+@override_settings(MEDIA_ROOT="/tmp/dft17-private-documents")
+class ProtectedDocumentTests(TestCase):
+    def setUp(self):
+        self.owner = get_user_model().objects.create_user(
+            email="protected-owner@example.com", password="Strong-pass1"
+        )
+        self.collaborator = get_user_model().objects.create_user(
+            email="collaborator@example.com", password="Strong-pass1"
+        )
+        self.other = get_user_model().objects.create_user(
+            email="protected-other@example.com", password="Strong-pass1"
+        )
+        category = Category.objects.create(name="Protected")
+        subject = Subject.objects.create(name="Private")
+        document_type = DocumentType.objects.create(name="Upload")
+        self.upload = SimpleUploadedFile("secret.txt", b"private document")
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("vault:document_upload"),
+            {"title": "Secret", "category": category.pk, "subject": subject.pk,
+             "document_type": document_type.pk, "content": self.upload,
+             "collaborators": [self.collaborator.pk]},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.document = Document.objects.get(title="Secret")
+
+    def test_only_owner_and_collaborator_can_download(self):
+        url = reverse("vault:document_download", args=[self.document.pk])
+        self.client.force_login(self.other)
+        denied = self.client.get(url)
+        self.assertEqual(denied.status_code, 404)
+        self.client.force_login(self.collaborator)
+        allowed = self.client.get(url)
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(b"".join(allowed.streaming_content), b"private document")
+
+    def test_anonymous_download_redirects_and_access_is_audited_without_content(self):
+        self.client.logout()
+        response = self.client.get(
+            reverse("vault:document_download", args=[self.document.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+        event = ActivityLog.objects.filter(
+            event_type=ActivityLog.EventType.DOCUMENT_ACCESS_DENIED
+        ).latest("created_at")
+        self.assertIsNone(event.user)
+        self.assertNotIn("private document", event.description)
+        self.assertNotIn("private document", str(event.context))
+
+    def test_expired_document_is_not_retrievable(self):
+        self.document.expiry_date = "2000-01-01"
+        self.document.save(update_fields=["expiry_date"])
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("vault:document_download", args=[self.document.pk])
+        )
+        self.assertEqual(response.status_code, 404)
