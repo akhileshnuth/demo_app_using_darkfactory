@@ -18,6 +18,18 @@ class VisualDesignTests(TestCase):
         self.assertContains(response, 'aria-label="Main navigation"')
         self.assertContains(response, 'id="main"')
 
+    def test_shared_layout_includes_copyright_footer_and_page_content(self):
+        user = get_user_model().objects.create_user(
+            email="person@example.com", password="Strong-pass1"
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, '<footer class="footer">')
+        self.assertContains(response, "Copyright 2026 Daylight. All rights reserved.")
+        self.assertContains(response, "Main content area")
+
     def test_visual_system_defines_shared_states_and_small_viewport_rules(self):
         stylesheet = Path(__file__).resolve().parents[1] / "static" / "css" / "base.css"
         css = stylesheet.read_text()

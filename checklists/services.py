@@ -11,6 +11,9 @@ the FR-019/FR-020/SC-006 guarantees are enforced in one place:
   so each user can review their own activity.
 """
 
+import hashlib
+import secrets
+
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -18,9 +21,14 @@ from django.utils import timezone
 from accounts.models import ActivityLog
 
 from .models import (
+    Checklist,
     ChecklistShare,
+    EmergencyAccessPolicy,
+    EmergencyAccessSession,
     EmergencyAccessRequest,
     Notification,
+    NotificationPreference,
+    SecurityEvent,
 )
 
 
@@ -35,8 +43,15 @@ EMERGENCY_VIEWER_STATUSES = {
 # ---------------------------------------------------------------------------
 
 def can_edit(user, checklist):
-    """Only the owner may edit/delete a checklist (FR-007, FR-020)."""
-    return checklist.owner_id == user.id
+    """Return whether the user owns or may contribute to the checklist."""
+    if checklist.owner_id == user.id:
+        return True
+    return ChecklistShare.objects.filter(
+        checklist=checklist,
+        recipient=user,
+        status=ChecklistShare.STATUS_ACTIVE,
+        permission=ChecklistShare.PERMISSION_CONTRIBUTE,
+    ).exists()
 
 
 def can_view(user, checklist):
@@ -54,7 +69,12 @@ def can_view(user, checklist):
         status=ChecklistShare.STATUS_ACTIVE,
     ).exists():
         return True
-    return has_emergency_grant(user, checklist.owner)
+    if not has_emergency_grant(user, checklist.owner):
+        return False
+    policies = EmergencyAccessPolicy.objects.filter(owner=checklist.owner, enabled=True)
+    if policies.exists() and not policies.filter(checklist=checklist).exists():
+        return False
+    return True
 
 
 def has_emergency_grant(user, owner):
@@ -65,11 +85,16 @@ def has_emergency_grant(user, owner):
     """
     if not owner.is_active or not user.is_active:
         return False
-    return EmergencyAccessRequest.objects.filter(
+    requests = EmergencyAccessRequest.objects.filter(
         owner=owner,
         requester=user,
         status__in=EMERGENCY_VIEWER_STATUSES,
-    ).exists()
+    )
+    for request_obj in requests:
+        if hasattr(request_obj, "session") and not request_obj.session.is_active:
+            continue
+        return True
+    return False
 
 
 def can_respond_to_request(user, request_obj):
@@ -83,6 +108,15 @@ def can_respond_to_request(user, request_obj):
 
 def notify(recipient, type, message, **related):
     """Create an in-app notification for ``recipient`` (FR-014)."""
+    preference, _ = NotificationPreference.objects.get_or_create(user=recipient)
+    # Security events are always retained; optional notifications can be muted.
+    optional = type not in {
+        Notification.TYPE_REVOCATION,
+        Notification.TYPE_EMERGENCY_REQUEST,
+        Notification.TYPE_EMERGENCY_RESPONSE,
+    }
+    if optional and not preference.optional_enabled:
+        return None
     return Notification.objects.create(
         recipient=recipient,
         type=type,
@@ -90,6 +124,18 @@ def notify(recipient, type, message, **related):
         related_checklist=related.get("checklist"),
         related_share=related.get("share"),
         related_request=related.get("request"),
+    )
+
+
+def record_security_event(actor, action, outcome, checklist=None, target_id="", **metadata):
+    """Persist a minimal, queryable audit record without protected content."""
+    return SecurityEvent.objects.create(
+        actor=actor,
+        action=action,
+        outcome=outcome,
+        checklist=checklist,
+        target_id=str(target_id),
+        metadata=metadata,
     )
 
 
@@ -125,6 +171,7 @@ def share_checklist(checklist, recipient):
                     f"{recipient.email}."
                 ),
             )
+            record_security_event(checklist.owner, "share_reactivated", "success", checklist, share.pk)
         return share, created
     share = ChecklistShare.objects.create(
         checklist=checklist, recipient=recipient, status=ChecklistShare.STATUS_ACTIVE
@@ -144,7 +191,50 @@ def share_checklist(checklist, recipient):
             f"Shared checklist '{checklist.title}' with {recipient.email}."
         ),
     )
+    record_security_event(checklist.owner, "share_created", "success", checklist, share.pk)
     return share, True
+
+
+@transaction.atomic
+def create_share_invitation(checklist, inviter, recipient, permission="view", expires_at=None):
+    """Create a recipient-bound, single-use invitation and return ``(grant, token)``."""
+    if inviter != checklist.owner or recipient == inviter:
+        raise ValueError("Only the owner may share with another user.")
+    if permission not in {ChecklistShare.PERMISSION_VIEW, ChecklistShare.PERMISSION_CONTRIBUTE}:
+        raise ValueError("Unsupported share permission.")
+    token = secrets.token_urlsafe(32)
+    share, _ = ChecklistShare.objects.update_or_create(
+        checklist=checklist,
+        recipient=recipient,
+        defaults={
+            "status": ChecklistShare.STATUS_REVOKED,
+            "permission": permission,
+            "invitation_token_hash": hashlib.sha256(token.encode()).hexdigest(),
+            "invitation_expires_at": expires_at,
+            "accepted_at": None,
+        },
+    )
+    notify(recipient, Notification.TYPE_SHARE, f"{inviter.email} invited you to a checklist.", checklist=checklist, share=share)
+    record_security_event(inviter, "share_created", "invited", checklist, share.pk)
+    return share, token
+
+
+@transaction.atomic
+def accept_share_invitation(token, recipient):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    share = ChecklistShare.objects.select_for_update().filter(
+        invitation_token_hash=token_hash, recipient=recipient,
+        status=ChecklistShare.STATUS_REVOKED,
+    ).first()
+    if share is None or (share.invitation_expires_at and share.invitation_expires_at <= timezone.now()):
+        record_security_event(recipient, "share_accepted", "denied")
+        return None
+    share.status = ChecklistShare.STATUS_ACTIVE
+    share.accepted_at = timezone.now()
+    share.invitation_token_hash = ""
+    share.save(update_fields=["status", "accepted_at", "invitation_token_hash"])
+    record_security_event(recipient, "share_accepted", "success", share.checklist, share.pk)
+    return share
 
 
 def revoke_share(share):
@@ -160,6 +250,9 @@ def revoke_share(share):
             f"Revoked sharing of checklist '{share.checklist.title}' "
             f"with {share.recipient.email}."
         ),
+    )
+    record_security_event(
+        share.checklist.owner, "share_revoked", "success", share.checklist, share.pk
     )
     notify(
         share.recipient,
@@ -217,6 +310,10 @@ def _auto_grant_if_expired(request_obj):
                     f"{request_obj.requester.display_name or request_obj.requester.email}."
                 ),
             )
+            record_security_event(
+                request_obj.owner, "emergency_access", "auto_granted",
+                target_id=request_obj.pk,
+            )
             return True
     return False
 
@@ -262,6 +359,7 @@ def request_emergency_access(contact, owner):
         event_type=ActivityLog.EventType.EMERGENCY_REQUESTED,
         description=f"Requested emergency access to {owner.email}'s checklists.",
     )
+    record_security_event(contact, "emergency_request", "pending", target_id=request_obj.pk)
     return request_obj
 
 
@@ -270,6 +368,17 @@ def approve_emergency_request(request_obj):
     resolved = request_obj.resolve(EmergencyAccessRequest.STATUS_APPROVED)
     if resolved != EmergencyAccessRequest.STATUS_APPROVED:
         return False
+    policy = EmergencyAccessPolicy.objects.filter(
+        owner=request_obj.owner, contacts=request_obj.requester, enabled=True
+    ).first()
+    if policy:
+        EmergencyAccessSession.objects.update_or_create(
+            request=request_obj,
+            defaults={
+                "expires_at": timezone.now() + timezone.timedelta(hours=policy.duration_hours),
+                "revoked_at": None,
+            },
+        )
     notify(
         request_obj.requester,
         Notification.TYPE_EMERGENCY_RESPONSE,
@@ -290,6 +399,9 @@ def approve_emergency_request(request_obj):
             f"Approved emergency access for "
             f"{request_obj.requester.display_name or request_obj.requester.email}."
         ),
+    )
+    record_security_event(
+        request_obj.owner, "emergency_request", "approved", target_id=request_obj.pk
     )
     return True
 
@@ -313,7 +425,22 @@ def deny_emergency_request(request_obj):
             f"{request_obj.requester.display_name or request_obj.requester.email}."
         ),
     )
+    record_security_event(
+        request_obj.owner, "emergency_request", "denied", target_id=request_obj.pk
+    )
     return True
+
+
+def revoke_emergency_session(session):
+    """Revoke a released emergency session; repeated revocation is harmless."""
+    if session.revoked_at is None:
+        session.revoked_at = timezone.now()
+        session.save(update_fields=["revoked_at"])
+        record_security_event(
+            session.request.owner, "emergency_session_revoked", "success",
+            target_id=session.pk,
+        )
+    return session
 
 
 @transaction.atomic

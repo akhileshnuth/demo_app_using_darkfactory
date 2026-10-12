@@ -4,17 +4,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-class DuplicateModel(models.Model):
-    name = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = (('name', 'created_at'),)
-
-    def is_duplicate(self):
-        return DuplicateModel.objects.filter(name=self.name, created_at__date=datetime.date.today()).exists()
-
-
 class Checklist(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -56,6 +45,14 @@ class ChecklistItem(models.Model):
     text = models.CharField(max_length=200)
     is_complete = models.BooleanField(default=False)
     position = models.PositiveIntegerField(default=0)
+    version = models.PositiveIntegerField(default=1)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="checklist_item_updates",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -69,6 +66,12 @@ class ChecklistItem(models.Model):
 
 
 class ChecklistShare(models.Model):
+    PERMISSION_VIEW = "view"
+    PERMISSION_CONTRIBUTE = "contribute"
+    PERMISSION_CHOICES = (
+        (PERMISSION_VIEW, "View"),
+        (PERMISSION_CONTRIBUTE, "Contribute"),
+    )
     STATUS_ACTIVE = "active"
     STATUS_REVOKED = "revoked"
     STATUS_CHOICES = (
@@ -87,6 +90,12 @@ class ChecklistShare(models.Model):
         related_name="shared_checklists",
     )
     shared_at = models.DateTimeField(auto_now_add=True)
+    permission = models.CharField(
+        max_length=12, choices=PERMISSION_CHOICES, default=PERMISSION_VIEW
+    )
+    invitation_token_hash = models.CharField(max_length=64, blank=True, default="")
+    invitation_expires_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
@@ -231,3 +240,60 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class NotificationPreference(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    optional_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class SecurityEvent(models.Model):
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="checklist_security_events",
+    )
+    action = models.CharField(max_length=80)
+    outcome = models.CharField(max_length=40)
+    checklist = models.ForeignKey(
+        Checklist, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="security_events",
+    )
+    target_id = models.CharField(max_length=80, blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class EmergencyAccessPolicy(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="emergency_policies",
+    )
+    checklist = models.ForeignKey(
+        Checklist, on_delete=models.CASCADE, related_name="emergency_policies"
+    )
+    enabled = models.BooleanField(default=True)
+    waiting_hours = models.PositiveIntegerField(default=72)
+    duration_hours = models.PositiveIntegerField(default=24)
+    designated_items = models.ManyToManyField(ChecklistItem, blank=True)
+    contacts = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="emergency_policies_as_contact"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class EmergencyAccessSession(models.Model):
+    request = models.OneToOneField(
+        "EmergencyAccessRequest", on_delete=models.CASCADE, related_name="session"
+    )
+    starts_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_active(self):
+        return self.revoked_at is None and self.expires_at > timezone.now()

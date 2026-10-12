@@ -1,0 +1,27 @@
+{
+  "questions": [
+    {
+      "question": "What exact copyright notice should visitors see, including the wording, year, and rights-holder name?",
+      "kind": "short",
+      "options": [],
+      "recommended": "Copyright 2026 Daylight. All rights reserved.",
+      "why": "The ticket requires copyright text but does not identify its approved wording, year, or rights holder."
+    },
+    {
+      "question": "Where should the approved static notice be defined?",
+      "kind": "choice",
+      "options": [
+        {
+          "label": "A",
+          "text": "Hardcode it in base.html"
+        },
+        {
+          "label": "B",
+          "text": "Supply it from Django configuration or template context"
+        }
+      ],
+      "recommended": "A",
+      "why": "The ticket requests a one-off base-template change and the specification excludes administrative editing or persistence."
+    }
+  ]
+}
