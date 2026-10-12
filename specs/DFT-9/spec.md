@@ -1,179 +1,150 @@
 # Feature Specification: Checklists, Secure Sharing, Emergency Access & Notifications
 
-**Feature Branch**: `DFT-9-checklists-sharing-emergency`
+**Feature Branch**: `DFT-9-checklists-secure-sharing`
 
-**Created**: 2026-09-09
+**Created**: 2026-10-12
 
 **Status**: Draft
 
-**Input**: User description: "Checklists, secure sharing, emergency access & notifications"
+**Input**: User description: "Ticket DFT-9: Checklists, secure sharing, emergency access & notifications"
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Create and Manage Personal Checklists (Priority: P1)
+### User Story 1 - Manage checklists (Priority: P1)
 
-An authenticated user navigates to the checklist section from the dashboard sidebar, creates a new checklist with a title, adds items to it, marks items as complete or incomplete, edits item text, deletes items, and deletes the entire checklist. All changes persist and are reflected immediately.
+As a user, I want to create and maintain checklists so that important tasks or information can be organized and completed reliably.
 
-**Why this priority**: Checklists are the foundational feature of this ticket — the core value proposition that all other features (sharing, emergency access, notifications) build upon. Without checklists, there is nothing to share or protect.
+**Why this priority**: A checklist is the core user value and provides a useful standalone product slice before sharing or emergency access is added.
 
-**Independent Test**: Can be fully tested by creating a checklist, adding multiple items, toggling completion status, editing items, deleting items, and verifying persistence across page reloads. Delivers a fully functional personal checklist tool.
+**Independent Test**: Create a checklist, add, edit, reorder, complete, and remove items, then reopen it and verify that its title, items, and completion states are preserved.
 
 **Acceptance Scenarios**:
 
-1. **Given** an authenticated user on the checklist page, **When** they create a new checklist with a title, **Then** a new empty checklist appears in their checklist list with the specified title.
-2. **Given** an authenticated user with an existing checklist, **When** they add a new item with text, **Then** the item appears in the checklist and the item count updates.
-3. **Given** an authenticated user with a checklist containing items, **When** they mark an item as complete, **Then** the item is visually distinguished (e.g., strikethrough) and the completion percentage updates.
-4. **Given** an authenticated user with a completed item, **When** they mark it as incomplete, **Then** the item returns to its original visual state.
-5. **Given** an authenticated user with a checklist item, **When** they edit the item text and save, **Then** the updated text is persisted and displayed.
-6. **Given** an authenticated user with a checklist item, **When** they delete the item, **Then** the item is removed and the item count decrements.
-7. **Given** an authenticated user with a checklist, **When** they delete the entire checklist, **Then** the checklist and all its items are removed from their list.
+1. **Given** an authenticated user has no checklist, **When** they create one with a title and items, **Then** the checklist is saved and displayed with each item incomplete.
+2. **Given** a saved checklist, **When** the user changes an item or marks it complete, **Then** the change is reflected immediately and remains after the checklist is reopened.
+3. **Given** a checklist with items, **When** the user reorders or removes an item, **Then** the resulting order and remaining items are saved without changing unrelated items.
 
 ---
 
-### User Story 2 - Share Checklists with Other Users (Priority: P2)
+### User Story 2 - Share a checklist securely (Priority: P1)
 
-An authenticated checklist owner can share a checklist with another registered user by entering their email address. The recipient receives a notification and can view (but not edit) the shared checklist. The owner can revoke sharing at any time.
+As a checklist owner, I want to share selected checklist content with specific people so that others can view or contribute without receiving unintended access.
 
-**Why this priority**: Secure sharing extends the value of checklists to collaborative use cases. It is secondary to checklist creation because sharing requires checklists to exist first, and the sharing mechanism itself depends on a working checklist infrastructure.
+**Why this priority**: Secure collaboration is the primary extension of checklist value and must establish explicit access boundaries before broader access scenarios are enabled.
 
-**Independent Test**: Can be fully tested by creating a checklist, sharing it with another user, logging in as that user to view it, and revoking the share. Delivers collaborative checklist viewing.
+**Independent Test**: Share one checklist with an invited recipient, verify the recipient's permitted access, verify that an unrelated user is denied, and revoke the share to confirm access is removed.
 
 **Acceptance Scenarios**:
 
-1. **Given** an authenticated checklist owner, **When** they enter a valid registered user's email and confirm sharing, **Then** the recipient is added as a viewer and receives a notification.
-2. **Given** an authenticated checklist owner, **When** they attempt to share with an unregistered email, **Then** the system rejects the share with an error message indicating the user does not exist.
-3. **Given** a user with whom a checklist has been shared, **When** they navigate to the shared checklists section, **Then** the shared checklist appears with a "Shared by [owner]" label.
-4. **Given** a recipient viewing a shared checklist, **When** they attempt to edit or delete items, **Then** the actions are disabled or not available (read-only access).
-5. **Given** an authenticated checklist owner, **When** they revoke sharing for a specific user, **Then** that user no longer has access to the checklist and loses it from their shared list.
-6. **Given** a recipient with a shared checklist, **When** the owner revokes access, **Then** the recipient receives a notification that access has been revoked.
+1. **Given** an owner has a private checklist, **When** they share it with a specified recipient and permission level, **Then** only that recipient receives access to that checklist at the granted level.
+2. **Given** a recipient has view access, **When** they open the shared checklist, **Then** they can view the permitted content but cannot change checklist data.
+3. **Given** a recipient has contribution access, **When** they update an allowed checklist item, **Then** the update is visible to authorized users and attributed to the contributor.
+4. **Given** an active share, **When** the owner revokes it, **Then** the recipient can no longer access the checklist through that share.
+5. **Given** a share invitation is sent, **When** it is accepted by the intended recipient, **Then** access is granted only after the recipient is authenticated and the invitation is valid.
 
 ---
 
-### User Story 3 - Emergency Access to Checklists (Priority: P3)
+### User Story 3 - Use emergency access safely (Priority: P1)
 
-A designated emergency contact can request access to a user's checklists in an emergency scenario. The checklist owner receives a notification of the emergency access request and can approve or deny it. If the owner does not respond within a configurable time window (default: 72 hours), access is automatically granted to the emergency contact.
+As an authorized person, I want a controlled emergency-access process for designated checklist information so that it can be reached during an urgent situation without making it generally public.
 
-**Why this priority**: Emergency access is a safety-critical feature that enables access to important checklists when the owner is unavailable. It is lower priority because it is a less frequent use case and requires both the sharing infrastructure and notification system to be in place first.
+**Why this priority**: Emergency access addresses the safety-critical scenario named in the ticket while requiring explicit safeguards against routine or unauthorized use.
 
-**Independent Test**: Can be fully tested by designating an emergency contact, triggering an emergency access request, and verifying the notification flow and auto-approval timeout. Delivers emergency access capability.
+**Independent Test**: Configure an emergency-access arrangement, trigger it as an eligible requester, verify the required access and notification behavior, and confirm that the event is recorded and access expires or can be revoked.
 
 **Acceptance Scenarios**:
 
-1. **Given** an authenticated user, **When** they designate another registered user as an emergency contact with a valid email, **Then** the emergency contact is saved and appears in their emergency contacts list.
-2. **Given** a user with designated emergency contacts, **When** an emergency contact requests access, **Then** the owner receives an immediate notification about the emergency access request.
-3. **Given** an owner who has received an emergency access request, **When** they approve the request, **Then** the emergency contact gains viewer access to all of the owner's checklists and receives a notification of approval.
-4. **Given** an owner who has received an emergency access request, **When** they deny the request, **Then** the emergency contact is notified of the denial and gains no access.
-5. **Given** an owner who has received an emergency access request, **When** they do not respond within 72 hours, **Then** the emergency contact is automatically granted viewer access to all checklists and both parties are notified.
-6. **Given** an authenticated user, **When** they remove an emergency contact, **Then** pending emergency access requests from that contact are cancelled and any previously granted emergency access is revoked.
+1. **Given** an owner has designated emergency-access content and an eligible emergency contact, **When** the contact starts an emergency-access request, **Then** the system applies the configured verification and waiting or approval rules before revealing content.
+2. **Given** an emergency request has been approved or its configured release condition is met, **When** the requester accesses the content, **Then** only the designated content is available and the access is clearly identified as emergency access.
+3. **Given** an emergency-access request is created, approved, denied, or used, **When** the event occurs, **Then** the owner and other configured parties receive a security notification and the event is recorded for review.
+4. **Given** an emergency-access session is active, **When** the owner or an authorized administrator revokes it or its configured duration ends, **Then** further access is blocked.
 
 ---
 
-### User Story 4 - Notification System (Priority: P2)
+### User Story 4 - Receive actionable notifications (Priority: P2)
 
-All users receive in-app notifications for relevant events: checklist shares received, share revocations, emergency access requests, emergency access approvals/denials, and emergency access auto-grants. Users can view a notification center, mark notifications as read, and clear all notifications.
+As a user, I want timely notifications about sharing, checklist collaboration, and emergency-access events so that I can respond to unexpected activity and stay aware of changes.
 
-**Why this priority**: The notification system is a cross-cutting concern that enables the other features to communicate state changes to users. It is P2 because it is required for sharing and emergency access to function properly, but the core checklist feature works without it.
+**Why this priority**: Notifications make access changes observable and support safe collaboration, but checklist and access controls can deliver an initial value independently.
 
-**Independent Test**: Can be fully tested by triggering various notification events and verifying they appear in the notification center with correct content and timestamps. Delivers event-driven notification visibility.
-
-**Acceptance Scenarios**:
-
-1. **Given** an authenticated user, **When** a notification is created for them, **Then** it appears in their notification center with the correct message, timestamp, and a read/unread indicator.
-2. **Given** an authenticated user with unread notifications, **When** they view the notification center, **Then** unread notifications are visually distinguished from read ones.
-3. **Given** an authenticated user with unread notifications, **When** they click on a notification, **Then** it is marked as read and they are navigated to the relevant context (e.g., the shared checklist).
-4. **Given** an authenticated user with notifications, **When** they use the "mark all as read" action, **Then** all unread notifications are marked as read.
-5. **Given** an authenticated user with notifications, **When** they use the "clear all" action, **Then** all notifications are removed from their view.
-6. **Given** an authenticated user, **When** they view the dashboard header, **Then** a notification badge shows the count of unread notifications.
-
----
-
-### User Story 5 - Checklist Templates and Quick-Start (Priority: P3)
-
-A user can create a new checklist from a predefined template (e.g., "Grocery List", "Travel Packing", "Meeting Agenda") rather than starting from scratch. The template populates the checklist with pre-filled items that the user can then edit.
-
-**Why this priority**: Templates improve user experience by reducing friction for common use cases, but they are not essential to the core checklist functionality. Users can always create checklists manually.
-
-**Independent Test**: Can be fully tested by selecting a template, creating a checklist from it, and verifying the pre-filled items are present and editable. Delivers faster checklist creation for common scenarios.
+**Independent Test**: Cause each supported notification event for a test account, verify the intended recipient, event details, delivery status, and configured notification preference.
 
 **Acceptance Scenarios**:
 
-1. **Given** an authenticated user on the checklist creation page, **When** they browse available templates, **Then** a list of predefined templates with titles and item counts is displayed.
-2. **Given** an authenticated user, **When** they select a template and confirm creation, **Then** a new checklist is created with the template's pre-filled items.
-3. **Given** an authenticated user with a template-created checklist, **When** they edit or delete pre-filled items, **Then** the changes persist normally.
+1. **Given** a user has enabled a notification channel, **When** a share is created, accepted, revoked, or an emergency-access event occurs, **Then** the user receives a notification describing the event, affected checklist, actor, and time without exposing unrelated checklist content.
+2. **Given** a user disables an optional notification category, **When** an event in that category occurs, **Then** no notification is sent through that disabled category while mandatory security notifications remain enabled.
+3. **Given** notification delivery fails, **When** the failure is detected, **Then** the event remains available in the product's notification history and the failure is handled without changing the underlying access decision.
 
 ---
 
 ### Edge Cases
 
-- What happens when a user attempts to share a checklist that is already shared with the target user?
-- How does the system handle concurrent edits to the same checklist by multiple users (if collaborative editing is supported)?
-- What happens when the checklist owner deletes a checklist that has been shared with others?
-- How does the system handle an emergency access request when the owner has already designated multiple emergency contacts?
-- What happens when a user attempts to designate themselves as their own emergency contact?
-- How does the system handle notification overflow (e.g., a user with 1000+ unread notifications)?
-- What happens when a user's account is deactivated while they have shared checklists or active emergency contacts?
-- How does the system handle network failures during the sharing or emergency access approval process?
-- What happens when a shared checklist owner changes their email address?
-- How does the system handle the edge case where an emergency access auto-grant occurs while a manual approval is in progress?
+- A checklist title or item is empty, exceeds the permitted size, or contains unsupported content; the system rejects the invalid change with a useful explanation and preserves the last valid version.
+- Two authorized users edit the same checklist item at nearly the same time; the system prevents silent data loss and communicates which version was retained or how the conflict can be resolved.
+- A user attempts to share a checklist with themselves, an unknown recipient, or a recipient who is not eligible for the selected permission; the system refuses the share and explains the constraint.
+- A share invitation is expired, already used, revoked, duplicated, or forwarded to another account; it must not grant access outside its intended recipient and validity period.
+- A user tries to access a private, revoked, expired, or emergency-restricted checklist; the system denies access without revealing protected content.
+- The owner deletes or changes content while a share or emergency request is pending; the system applies a consistent rule for pending requests and does not release content that is no longer designated.
+- An emergency request is submitted repeatedly or by an ineligible person; the system rate-limits or denies the requests and records the security events.
+- The owner cannot respond to an emergency request; the configured emergency release process must still follow its documented safeguards and time limits.
+- A required security notification cannot be delivered; the system records the failure and exposes it to an authorized reviewer without weakening access controls.
+- A user loses authentication during an edit or access request; the system saves no unauthorized partial change and requires re-authentication before resuming.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a checklist management interface accessible from the dashboard sidebar navigation.
-- **FR-002**: System MUST allow authenticated users to create checklists with a title and persist them to the database.
-- **FR-003**: System MUST allow users to add, edit, delete, and toggle completion status of items within a checklist.
-- **FR-004**: System MUST display checklist completion statistics (e.g., percentage complete, item count).
-- **FR-005**: System MUST provide a sharing mechanism that allows checklist owners to share with other registered users via email address.
-- **FR-006**: System MUST validate that share recipients are registered users before granting access.
-- **FR-007**: System MUST enforce read-only access for shared checklist recipients (no edit/delete permissions).
-- **FR-008**: System MUST allow checklist owners to revoke sharing access at any time.
-- **FR-009**: System MUST support emergency contact designation by authenticated users.
-- **FR-010**: System MUST support emergency access requests from designated emergency contacts.
-- **FR-011**: System MUST implement a configurable auto-approval timeout for emergency access (default: 72 hours).
-- **FR-012**: System MUST notify checklist owners of emergency access requests.
-- **FR-013**: System MUST notify both parties of emergency access approval, denial, or auto-grant.
-- **FR-014**: System MUST provide an in-app notification center with unread indicators and timestamps.
-- **FR-015**: System MUST allow users to mark notifications as read individually or in bulk.
-- **FR-016**: System MUST display unread notification count in the dashboard header.
-- **FR-017**: System MUST provide checklist templates for quick-start checklist creation.
-- **FR-018**: System MUST persist all checklist data, sharing relationships, emergency contacts, and notifications in the database.
-- **FR-019**: System MUST enforce authentication on all checklist, sharing, emergency access, and notification endpoints.
-- **FR-020**: System MUST enforce authorization checks to ensure users can only manage their own checklists and contacts.
+- **FR-001**: System MUST allow an authenticated user to create, view, edit, reorder, complete, and remove checklist items within checklists they own or are authorized to modify.
+- **FR-002**: System MUST persist checklist titles, item content, item order, completion state, ownership, and relevant update history.
+- **FR-003**: System MUST enforce least-privilege access for each checklist, distinguishing at minimum private, view, and contribution access.
+- **FR-004**: System MUST allow an owner to create, inspect, and revoke a share for a specified recipient and checklist.
+- **FR-005**: System MUST validate share invitations and bind them to the intended authenticated recipient, checklist, permission, and validity period before granting access.
+- **FR-006**: System MUST prevent recipients from discovering or accessing checklists, items, or metadata outside their authorization.
+- **FR-007**: System MUST provide an emergency-access configuration for owner-designated content and eligible emergency contacts without making that content generally public.
+- **FR-008**: System MUST require the configured verification, approval, waiting, and duration controls before granting emergency access.
+- **FR-009**: System MUST limit emergency access to the content and permissions explicitly designated by the owner.
+- **FR-010**: System MUST allow authorized parties to deny, revoke, or expire emergency access and MUST block access after revocation or expiration.
+- **FR-011**: System MUST record security-relevant events including share creation, acceptance, change, revocation, emergency requests, decisions, access, expiration, and notification outcomes.
+- **FR-012**: System MUST identify the actor, affected checklist, action, and time for each recorded security-relevant event, subject to the repository's privacy and retention rules.
+- **FR-013**: System MUST send notifications for sharing and emergency-access events to the configured recipients through supported channels.
+- **FR-014**: System MUST allow users to manage optional notification preferences while preserving mandatory security notifications.
+- **FR-015**: System MUST avoid including protected checklist content or credentials in notification messages and must expose only the minimum information needed to act.
+- **FR-016**: System MUST provide an in-product view of relevant notification history and delivery status to authorized users.
+- **FR-017**: System MUST validate checklist data, share requests, and emergency-access requests before persistence or release, and MUST preserve valid existing data when validation fails.
+- **FR-018**: System MUST provide clear user-facing outcomes for denied, expired, revoked, conflicting, or failed operations without disclosing protected information.
+- **FR-019**: Any implementation work involving declared `auth` or `pii` security-zone paths MUST be performed by the authorized human workflow; this specification does not authorize agent writes in those zones.
 
-### Key Entities
+### Key Entities *(include if feature involves data)*
 
-- **Checklist**: Represents a user's checklist. Key attributes: title, owner (foreign key to User), created timestamp, updated timestamp. One-to-many relationship with ChecklistItem. One-to-many relationship with ChecklistShare.
-- **ChecklistItem**: Represents an individual item within a checklist. Key attributes: text, completion status, order/position, created timestamp, updated timestamp. Many-to-one relationship with Checklist.
-- **ChecklistShare**: Represents a sharing relationship between a checklist owner and a recipient. Key attributes: checklist (foreign key to Checklist), recipient (foreign key to User), shared timestamp, status (active/revoked). Enforces read-only access for recipients.
-- **EmergencyContact**: Represents a designated emergency contact for a user. Key attributes: owner (foreign key to User), contact (foreign key to User), designated timestamp. Supports emergency access request flow.
-- **EmergencyAccessRequest**: Represents a request from an emergency contact for access to the owner's checklists. Key attributes: owner (foreign key to User), requester (foreign key to EmergencyContact), status (pending/approved/denied/auto-granted), requested timestamp, resolved timestamp, timeout deadline.
-- **Notification**: Represents an in-app notification for a user. Key attributes: recipient (foreign key to User), message, type (share/revocation/emergency_request/emergency_response), read status, created timestamp, related entity reference (checklist, share, or emergency request).
+- **Checklist**: An owner's organized collection of checklist items, including title, ownership, visibility, designated emergency content, and lifecycle state.
+- **Checklist Item**: A task or information entry belonging to a checklist, including content, order, completion state, and update attribution.
+- **Share Grant**: A bounded authorization connecting a checklist, recipient, permission level, inviter, status, and validity period.
+- **Emergency Access Policy**: The owner's designation of emergency content, eligible contacts, verification and release conditions, duration, and revocation rules.
+- **Emergency Access Request**: A request and its decision or usage history, including requester, policy, status, timestamps, and security events.
+- **Notification Preference**: A user's choices for optional event categories and supported delivery channels, excluding controls for mandatory security notifications.
+- **Notification**: An event message addressed to an authorized recipient, including category, checklist reference, minimal safe details, delivery status, and timestamp.
+- **Security Event**: An auditable record of an access, sharing, emergency, or notification action, including actor, target, outcome, and time.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: A user can create a checklist with 5 items in under 30 seconds from clicking "New Checklist."
-- **SC-002**: A user can share a checklist with another registered user in under 15 seconds, and the recipient sees the shared checklist within 10 seconds of the share action.
-- **SC-003**: Emergency access auto-grant triggers exactly at the configured timeout (72 hours default) with zero manual intervention required.
-- **SC-004**: 100% of notification events (shares, revocations, emergency requests/responses) result in a visible in-app notification for the relevant user within 5 seconds.
-- **SC-005**: All checklist operations (create, edit, delete, toggle) persist correctly to the database with zero data loss on normal operation.
-- **SC-006**: Users cannot access checklists they do not own or have not been shared with; authorization failures result in appropriate error responses (not data leakage).
-- **SC-007**: The notification center accurately reflects unread count and state for all users, even under concurrent access.
-- **SC-008**: All features are accessible and functional through the dashboard sidebar navigation without requiring direct URL manipulation.
+- **SC-001**: At least 95% of usability-test participants can create a checklist with three items and mark one complete without assistance.
+- **SC-002**: In authorization tests, 100% of revoked, expired, or unauthorized share and emergency-access attempts are denied and reveal no protected checklist content.
+- **SC-003**: In end-to-end event tests, 100% of share and emergency-access state changes produce an attributable security event and the required notification outcome.
+- **SC-004**: At least 95% of valid share invitations grant the intended permission to the intended authenticated recipient within one minute of acceptance.
+- **SC-005**: At least 95% of users can identify the actor, affected checklist, and action from a delivered security notification without opening protected checklist content.
+- **SC-006**: No mandatory security notification failure removes, expands, or otherwise changes the underlying authorization decision.
 
 ## Assumptions
 
-- The existing Django authentication system (from DFT-7) is reused for all user identification; no additional auth mechanisms are required.
-- Emergency access applies to ALL of the owner's checklists — there is no per-checklist emergency access granularity in v1.
-- Sharing is read-only for recipients; collaborative editing (simultaneous item modification by multiple users) is out of scope for this ticket.
-- The notification system is in-app only; email notifications, SMS, or push notifications are not in scope for v1.
-- Checklist templates are a predefined set managed in code; there is no admin interface for creating or editing templates in v1.
-- The 72-hour emergency access timeout is configurable via a system setting but not exposed to users in the UI for v1.
-- Users can designate multiple emergency contacts, and any one contact can request emergency access independently.
-- Emergency access grants viewer access to ALL of the owner's existing and future checklists (no selective emergency access).
-- The system assumes a reasonable number of checklists and items per user (performance under extreme scale is not a v1 concern).
-- No design file or UI mockup was provided; the checklist interface, sharing UI, emergency access flow, and notification center layout are to be determined by the implementer.
-- The existing Django project structure and dashboard shell from DFT-7 are the starting point; this ticket extends rather than replaces the existing codebase.
-- Database for development and testing will be SQLite (Django default); production database choice is out of scope for this ticket.
+- The target users are authenticated account holders, checklist owners, invited collaborators, and explicitly designated emergency contacts.
+- The existing authentication and account-identity mechanism is reused; the ticket does not define a new sign-in or identity-verification method.
+- The ticket does not specify permission names, emergency verification factors, approval roles, waiting periods, access duration, notification channels, or retention periods; product and security owners must confirm these before implementation, and the initial design should use configurable values rather than hard-coded policy.
+- A share is intended for specific authenticated recipients rather than anonymous public links; anonymous links are not included unless separately approved.
+- The ticket does not provide a design file, workflow diagram, API contract, notification-provider specification, or policy document. These are **MISSING INPUTS**; the feature must be designed around their eventual constraints and cannot treat an absent document as approval for broader access.
+- Existing user, checklist, audit, and notification capabilities may be reused where available, but their availability and interfaces are unconfirmed **MISSING INPUTS** and must be verified during clarification and planning.
+- Delivery channels and failure/retry behavior are not specified; the first release must support at least an in-product notification history, with any external channel requiring explicit product and security approval.
+- Data retention, export, deletion, and legal requirements for checklist and security-event data are not specified **MISSING INPUTS** and must be resolved before implementation.
+- Functional changes require tests under the project constitution, and any new runtime dependency requires human approval.
+- Sensitive paths covered by the repository's declared `auth` and `pii` security zones are not to be written by the agent; human-gated work must handle those changes.
