@@ -17,7 +17,9 @@ class CategoryForm(forms.ModelForm):
         fields = ["name", "description"]
 
     def clean_name(self):
-        name = self.cleaned_data["name"]
+        name = self.cleaned_data["name"].strip()
+        if not name:
+            raise forms.ValidationError("A category name is required.")
         qs = Category.objects.filter(name__iexact=name)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -34,7 +36,9 @@ class SubjectForm(forms.ModelForm):
         fields = ["name", "description"]
 
     def clean_name(self):
-        name = self.cleaned_data["name"]
+        name = self.cleaned_data["name"].strip()
+        if not name:
+            raise forms.ValidationError("A subject name is required.")
         qs = Subject.objects.filter(name__iexact=name)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -51,7 +55,9 @@ class DocumentTypeForm(forms.ModelForm):
         fields = ["name", "description"]
 
     def clean_name(self):
-        name = self.cleaned_data["name"]
+        name = self.cleaned_data["name"].strip()
+        if not name:
+            raise forms.ValidationError("A document type name is required.")
         qs = DocumentType.objects.filter(name__iexact=name)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -80,7 +86,9 @@ class DocumentForm(forms.ModelForm):
         self.user = user
 
     def clean_title(self):
-        title = self.cleaned_data["title"]
+        title = self.cleaned_data["title"].strip()
+        if not title:
+            raise forms.ValidationError("A document title is required.")
         if not self.user:
             return title
         qs = Document.objects.filter(owner=self.user, title__iexact=title)
