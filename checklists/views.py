@@ -11,7 +11,7 @@ activity log (DFT-14).
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.db import models
 from django.urls import reverse
@@ -96,6 +96,12 @@ class _ChecklistOwnerMixin:
     def _get_owned_checklist(self, pk):
         return get_object_or_404(Checklist, pk=pk, owner=self.request.user)
 
+    def _get_editable_checklist(self, pk):
+        checklist = get_object_or_404(Checklist, pk=pk)
+        if not services.can_edit(self.request.user, checklist):
+            raise Http404
+        return checklist
+
 
 class ChecklistDetailView(LoginRequiredMixin, DetailView):
     """Show a checklist's items and completion stats (FR-001/003/004)."""
@@ -130,7 +136,7 @@ class ChecklistItemCreateView(LoginRequiredMixin, _ChecklistOwnerMixin, View):
     """Add an item to a checklist (FR-003 acceptance 2). Edit access required."""
 
     def post(self, request, pk):
-        checklist = self._get_owned_checklist(pk)
+        checklist = self._get_editable_checklist(pk)
         form = ChecklistItemForm(request.POST)
         if form.is_valid():
             position = (
@@ -156,10 +162,12 @@ class ChecklistItemToggleView(LoginRequiredMixin, _ChecklistOwnerMixin, View):
     """Toggle an item's completion status (FR-003 acceptance 3/4). Edit access."""
 
     def post(self, request, pk, item_id):
-        checklist = self._get_owned_checklist(pk)
+        checklist = self._get_editable_checklist(pk)
         item = get_object_or_404(ChecklistItem, pk=item_id, checklist=checklist)
         item.is_complete = not item.is_complete
-        item.save(update_fields=["is_complete"])
+        item.version += 1
+        item.updated_by = request.user
+        item.save(update_fields=["is_complete", "version", "updated_by", "updated_at"])
         return redirect("checklist_detail", pk=checklist.pk)
 
 
@@ -167,12 +175,14 @@ class ChecklistItemEditView(LoginRequiredMixin, _ChecklistOwnerMixin, View):
     """Edit an item's text (FR-003 acceptance 5). Edit access."""
 
     def post(self, request, pk, item_id):
-        checklist = self._get_owned_checklist(pk)
+        checklist = self._get_editable_checklist(pk)
         item = get_object_or_404(ChecklistItem, pk=item_id, checklist=checklist)
         form = ChecklistItemForm(request.POST)
         if form.is_valid():
             item.text = form.cleaned_data["text"]
-            item.save(update_fields=["text"])
+            item.version += 1
+            item.updated_by = request.user
+            item.save(update_fields=["text", "version", "updated_by", "updated_at"])
         else:
             messages.error(
                 self.request,
@@ -185,7 +195,7 @@ class ChecklistItemDeleteView(LoginRequiredMixin, _ChecklistOwnerMixin, View):
     """Delete an item (FR-003 acceptance 6). Edit access."""
 
     def post(self, request, pk, item_id):
-        checklist = self._get_owned_checklist(pk)
+        checklist = self._get_editable_checklist(pk)
         item = get_object_or_404(ChecklistItem, pk=item_id, checklist=checklist)
         item.delete()
         return redirect("checklist_detail", pk=checklist.pk)

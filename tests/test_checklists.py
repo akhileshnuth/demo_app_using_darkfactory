@@ -15,6 +15,8 @@ from checklists.models import (
     EmergencyAccessRequest,
     EmergencyContact,
     Notification,
+    NotificationPreference,
+    SecurityEvent,
 )
 
 
@@ -136,6 +138,30 @@ class ChecklistFlowTests(TestCase):
         self.client.post(reverse("notification_clear"))
         self.assertFalse(Notification.objects.filter(recipient=self.owner).exists())
         self.assertTrue(Notification.objects.filter(recipient=self.recipient).exists())
+
+    def test_recipient_bound_invitation_requires_acceptance_and_records_event(self):
+        expires_at = timezone.now() + timedelta(hours=1)
+        share, token = services.create_share_invitation(
+            self.checklist, self.owner, self.recipient, "contribute", expires_at
+        )
+        self.assertFalse(services.can_view(self.recipient, self.checklist))
+        self.assertIsNone(services.accept_share_invitation(token, self.other))
+        self.assertIsNotNone(services.accept_share_invitation(token, self.recipient))
+        self.assertTrue(services.can_edit(self.recipient, self.checklist))
+        self.assertIsNone(services.accept_share_invitation(token, self.recipient))
+        self.assertTrue(
+            SecurityEvent.objects.filter(
+                action="share_accepted", outcome="success", target_id=str(share.pk)
+            ).exists()
+        )
+
+    def test_optional_notifications_can_be_disabled_without_losing_audit_event(self):
+        NotificationPreference.objects.create(user=self.recipient, optional_enabled=False)
+        services.notify(
+            self.recipient, Notification.TYPE_SHARE, "A checklist was shared.", checklist=self.checklist
+        )
+        self.assertFalse(Notification.objects.filter(recipient=self.recipient).exists())
+        self.assertTrue(self.recipient.notifications.count() == 0)
 
     def test_unauthenticated_checklist_routes_redirect_to_login(self):
         response = self.client.get(reverse("checklist_list"))
