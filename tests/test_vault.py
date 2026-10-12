@@ -73,8 +73,10 @@ class VaultFlowTests(TestCase):
             f"{reverse('login')}?next={reverse('vault:document_list')}",
         )
 
-    def test_export_surfaces_existing_legacy_field_failure_without_writing_data(self):
+    def test_export_returns_a_complete_archive(self):
         self.client.force_login(self.user)
 
-        with self.assertRaises(AttributeError):
-            self.client.get(reverse("vault:export_data"))
+        response = self.client.get(reverse("vault:export_data"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")

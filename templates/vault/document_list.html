@@ -22,7 +22,8 @@
   {% if document_create_url %}<a href="{{ document_create_url }}">Add document</a> |{% endif %}
   {% if category_list_url %}<a href="{{ category_list_url }}">Categories</a> |{% endif %}
   {% if subject_list_url %}<a href="{{ subject_list_url }}">Subjects</a> |{% endif %}
-  {% if documenttype_list_url %}<a href="{{ documenttype_list_url }}">Document Types</a>{% endif %}
+  {% if documenttype_list_url %}<a href="{{ documenttype_list_url }}">Document Types</a> |{% endif %}
+  <a href="{% url 'vault:export_data' %}">Download vault export</a>
 </p>
 
 <form method="get" action="" class="filter-form" style="margin-bottom:1rem;">

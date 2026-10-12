@@ -1,0 +1,47 @@
+{
+  "questions": [
+    {
+      "question": "What exact data and package format should the export contain?",
+      "kind": "short",
+      "options": [],
+      "recommended": "A ZIP containing one UTF-8 CSV of every owned Document's current fields (title, notes, expiry_date, created_at, updated_at, and category, subject, and document_type names), with no attachments or derived data.",
+      "why": "The ticket does not define the contract, and the current Document model has metadata only while the legacy exporter references nonexistent attachment and issue-date fields."
+    },
+    {
+      "question": "Which snapshot behavior should an export use when vault data changes during preparation?",
+      "kind": "choice",
+      "options": [
+        {"label": "A", "text": "A consistent point-in-time snapshot captured when the export request starts"},
+        {"label": "B", "text": "The latest values read as each record is processed"},
+        {"label": "C", "text": "The values at the moment the user starts the download"}
+      ],
+      "recommended": "A",
+      "why": "A fixed snapshot prevents a large export from mixing undocumented states and matches the specification's stated assumption."
+    },
+    {
+      "question": "Should the first release prepare the export synchronously as a direct download, or use an asynchronous job with a status and later download step?",
+      "kind": "choice",
+      "options": [
+        {"label": "A", "text": "Synchronous request that returns the completed download"},
+        {"label": "B", "text": "Asynchronous job with explicit pending, completed, and failed states"},
+        {"label": "C", "text": "Synchronous below a defined size limit and asynchronous above it"}
+      ],
+      "recommended": "A",
+      "why": "The repository already wires a direct `/vault/export/` endpoint and the current model exports small metadata records, avoiding job storage and notification scope in the first release."
+    },
+    {
+      "question": "Where should the user-facing export action appear?",
+      "kind": "short",
+      "options": [],
+      "recommended": "Add an Export vault link or button to the authenticated document-list page that targets the existing `vault:export_data` route.",
+      "why": "The route exists but the current vault template does not link to it, so the usability success criterion cannot be met without defining the entry point."
+    },
+    {
+      "question": "How long should a generated export remain available, and when should it be cleaned up?",
+      "kind": "short",
+      "options": [],
+      "recommended": "Stream the export directly and retain no generated server-side file after the response completes; if asynchronous generation is selected, expire it after one successful download or 24 hours, whichever comes first.",
+      "why": "Export retention and download expiration are explicitly missing, and the choice determines whether storage, cleanup, and retry behavior must be implemented."
+    }
+  ]
+}
