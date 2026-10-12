@@ -59,10 +59,10 @@ class ProfileAdmin(admin.ModelAdmin):
 class ActivityLogAdmin(admin.ModelAdmin):
     """Read-only view of the per-user activity trail (DFT-14)."""
 
-    list_display = ("user", "event_type", "description", "created_at")
+    list_display = ("user", "event_type", "document_reference", "description", "created_at")
     list_filter = ("event_type",)
-    search_fields = ("user__email", "description")
-    readonly_fields = ("user", "event_type", "description", "created_at")
+    search_fields = ("user__email", "document_reference", "description")
+    readonly_fields = ("user", "event_type", "document_reference", "context", "description", "created_at")
 
     def has_add_permission(self, request):
         return False

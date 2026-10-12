@@ -6,6 +6,7 @@ required fields and enforces per-user title uniqueness.
 """
 
 from django import forms
+from django.contrib.auth import get_user_model
 
 from .models import Category, Document, DocumentType, Subject
 
@@ -68,11 +69,14 @@ class DocumentTypeForm(forms.ModelForm):
 
 
 class DocumentForm(forms.ModelForm):
+    collaborators = forms.ModelMultipleChoiceField(
+        queryset=get_user_model().objects.all(),
+        required=False,
+    )
+
     class Meta:
         model = Document
-        fields = [
-            "title", "category", "subject", "document_type", "notes", "expiry_date"
-        ]
+        fields = ["title", "category", "subject", "document_type", "notes", "content", "collaborators"]
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 4}),
         }
@@ -102,4 +106,5 @@ class DocumentForm(forms.ModelForm):
             doc.owner = self.user
         if commit:
             doc.save()
+            self.save_m2m()
         return doc

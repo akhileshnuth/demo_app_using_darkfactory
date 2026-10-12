@@ -1,7 +1,21 @@
 import datetime
+import uuid
+from zoneinfo import ZoneInfoNotFoundError
 from django.conf import settings
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
+
+
+def private_document_path(instance, filename):
+    return f"documents/{uuid.uuid4().hex}/{filename}"
+
+
+def document_today():
+    try:
+        return timezone.localdate()
+    except ZoneInfoNotFoundError:
+        return datetime.datetime.now(datetime.timezone.utc).date()
 
 
 class SampleModel(models.Model):
@@ -107,6 +121,23 @@ class Document(models.Model):
     subject = models.ForeignKey(
         Subject, on_delete=models.PROTECT, related_name="documents"
     )
+    content = models.FileField(
+        upload_to=private_document_path, blank=True, null=True, max_length=500
+    )
+    collaborators = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="shared_vault_documents"
+    )
+
+    class ProtectionStatus(models.TextChoices):
+        LEGACY = "legacy", "Legacy"
+        PENDING = "pending", "Pending protection"
+        READY = "ready", "Ready"
+        DELETED = "deleted", "Deleted"
+
+    protection_status = models.CharField(
+        max_length=16, choices=ProtectionStatus.choices,
+        default=ProtectionStatus.LEGACY,
+    )
 
     class Meta:
         ordering = ["-updated_at"]
@@ -118,3 +149,15 @@ class Document(models.Model):
 
     def __str__(self):
         return self.title
+
+    def is_available(self):
+        return bool(
+            self.content
+            and self.protection_status == self.ProtectionStatus.READY
+            and (self.expiry_date is None or self.expiry_date >= document_today())
+        )
+
+    def delete(self, *args, **kwargs):
+        if self.content:
+            self.content.delete(save=False)
+        return super().delete(*args, **kwargs)

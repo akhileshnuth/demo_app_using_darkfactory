@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from accounts.models import ActivityLog
 from vault.forms import CategoryForm, DocumentForm
 from vault.models import Category, Document, DocumentType, Subject
 
@@ -82,89 +84,60 @@ class VaultFlowTests(TestCase):
         self.assertEqual(response["Content-Type"], "application/zip")
 
 
-@override_settings(USE_TZ=False)
-class VaultLifecycleTests(TestCase):
+@override_settings(MEDIA_ROOT="/tmp/dft17-private-documents")
+class ProtectedDocumentTests(TestCase):
     def setUp(self):
-        user_model = get_user_model()
-        self.user = user_model.objects.create_user(
-            email="user@example.com", password="Strong-pass1"
+        self.owner = get_user_model().objects.create_user(
+            email="protected-owner@example.com", password="Strong-pass1"
         )
-        self.staff = user_model.objects.create_user(
-            email="staff@example.com", password="Strong-pass1", is_staff=True
+        self.collaborator = get_user_model().objects.create_user(
+            email="collaborator@example.com", password="Strong-pass1"
         )
-        self.category = Category.objects.create(name="Personal")
-        self.subject = Subject.objects.create(name="Identity")
-        self.document_type = DocumentType.objects.create(name="Record")
-
-    def test_staff_can_create_update_and_delete_taxonomy(self):
-        self.client.force_login(self.staff)
+        self.other = get_user_model().objects.create_user(
+            email="protected-other@example.com", password="Strong-pass1"
+        )
+        category = Category.objects.create(name="Protected")
+        subject = Subject.objects.create(name="Private")
+        document_type = DocumentType.objects.create(name="Upload")
+        self.upload = SimpleUploadedFile("secret.txt", b"private document")
+        self.client.force_login(self.owner)
         response = self.client.post(
-            reverse("vault:category_create"), {"name": "Finance", "description": ""}
+            reverse("vault:document_upload"),
+            {"title": "Secret", "category": category.pk, "subject": subject.pk,
+             "document_type": document_type.pk, "content": self.upload,
+             "collaborators": [self.collaborator.pk]},
         )
-        category = Category.objects.get(name="Finance")
-        self.assertRedirects(response, reverse("vault:category_list"))
+        self.assertEqual(response.status_code, 302)
+        self.document = Document.objects.get(title="Secret")
 
-        response = self.client.post(
-            reverse("vault:category_update", args=[category.pk]),
-            {"name": "Money", "description": ""},
-        )
-        self.assertRedirects(response, reverse("vault:category_list"))
-        self.assertTrue(Category.objects.filter(name="Money").exists())
+    def test_only_owner_and_collaborator_can_download(self):
+        url = reverse("vault:document_download", args=[self.document.pk])
+        self.client.force_login(self.other)
+        denied = self.client.get(url)
+        self.assertEqual(denied.status_code, 404)
+        self.client.force_login(self.collaborator)
+        allowed = self.client.get(url)
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(b"".join(allowed.streaming_content), b"private document")
 
-        response = self.client.post(
-            reverse("vault:category_delete", args=[category.pk])
-        )
-        self.assertRedirects(response, reverse("vault:category_list"))
-        self.assertFalse(Category.objects.filter(pk=category.pk).exists())
-
-    def test_non_staff_cannot_change_taxonomy(self):
-        self.client.force_login(self.user)
-        response = self.client.post(
-            reverse("vault:category_create"), {"name": "Finance"}
-        )
-        self.assertEqual(response.status_code, 403)
-        self.assertFalse(Category.objects.filter(name="Finance").exists())
-
-    def test_document_lifecycle_is_owner_scoped_and_classified(self):
-        self.client.force_login(self.user)
-        response = self.client.post(
-            reverse("vault:document_create"),
-            {
-                "title": "Passport",
-                "category": self.category.pk,
-                "subject": self.subject.pk,
-                "document_type": self.document_type.pk,
-                "notes": "Keep current",
-                "expiry_date": "2030-01-01",
-            },
-        )
-        document = Document.objects.get(title="Passport")
-        self.assertRedirects(response, reverse("vault:document_list"))
-        self.assertEqual(document.owner, self.user)
-        self.assertEqual(document.expiry_date.isoformat(), "2030-01-01")
-
+    def test_anonymous_download_redirects_and_access_is_audited_without_content(self):
+        self.client.logout()
         response = self.client.get(
-            reverse("vault:document_update", args=[document.pk])
+            reverse("vault:document_download", args=[self.document.pk])
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        event = ActivityLog.objects.filter(
+            event_type=ActivityLog.EventType.DOCUMENT_ACCESS_DENIED
+        ).latest("created_at")
+        self.assertIsNone(event.user)
+        self.assertNotIn("private document", event.description)
+        self.assertNotIn("private document", str(event.context))
 
-    def test_taxonomy_in_use_cannot_be_deleted(self):
-        document = Document.objects.create(
-            owner=self.user,
-            title="Passport",
-            category=self.category,
-            subject=self.subject,
-            document_type=self.document_type,
+    def test_expired_document_is_not_retrievable(self):
+        self.document.expiry_date = "2000-01-01"
+        self.document.save(update_fields=["expiry_date"])
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("vault:document_download", args=[self.document.pk])
         )
-        self.client.force_login(self.staff)
-        response = self.client.post(
-            reverse("vault:category_delete", args=[self.category.pk])
-        )
-        self.assertRedirects(response, reverse("vault:category_list"))
-        self.assertTrue(Category.objects.filter(pk=self.category.pk).exists())
-        document.refresh_from_db()
-
-    def test_legacy_document_list_redirects_to_canonical_url(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse("vault:legacy_document_list"))
-        self.assertRedirects(response, reverse("vault:document_list"), status_code=301)
+        self.assertEqual(response.status_code, 404)

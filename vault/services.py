@@ -2,10 +2,15 @@ import json
 import zipfile
 from datetime import date, datetime
 from io import BytesIO
+from pathlib import Path
 
 from django.conf import settings
+from django.core.files.storage import default_storage
+from django.db import transaction
+from django.utils import timezone
 
-from .models import Document
+from accounts.models import ActivityLog
+from .models import Document, document_today
 
 
 EXPORT_FORMAT = "vault-json"
@@ -18,6 +23,83 @@ DEFAULT_MAX_EXPORT_SIZE = 10 * 1024 * 1024
 
 class VaultExportError(Exception):
     """Raised when a complete vault export cannot be prepared."""
+
+
+class DocumentAccessError(Exception):
+    """Raised when a protected document cannot be safely accessed."""
+
+
+def _audit_document_access(document_reference, user, allowed, reason):
+    try:
+        ActivityLog.objects.create(
+            user=user if getattr(user, "is_authenticated", False) else None,
+            event_type=(
+                ActivityLog.EventType.DOCUMENT_ACCESS_ALLOWED
+                if allowed else ActivityLog.EventType.DOCUMENT_ACCESS_DENIED
+            ),
+            description=f"Document access {'allowed' if allowed else 'denied'}: {reason}",
+            document_reference=str(document_reference),
+            context={"outcome": "allow" if allowed else "deny", "reason": reason},
+        )
+    except Exception as error:
+        raise DocumentAccessError("The access decision could not be audited.") from error
+
+
+def authorize_document_access(document_id, user):
+    """Return a document only when its current policy and lifecycle allow it."""
+    document = Document.objects.filter(pk=document_id).prefetch_related("collaborators").first()
+    if document is None:
+        _audit_document_access(document_id, user, False, "unresolved")
+        raise DocumentAccessError("Document unavailable.")
+    authenticated = getattr(user, "is_authenticated", False)
+    allowed = authenticated and document.is_available() and (
+        user.pk == document.owner_id or document.collaborators.filter(pk=user.pk).exists()
+    )
+    if not allowed:
+        _audit_document_access(document.pk, user, False, "policy")
+        raise DocumentAccessError("Document unavailable.")
+    _audit_document_access(document.pk, user, True, "policy")
+    return document
+
+
+def save_uploaded_document(form, user):
+    upload = form.cleaned_data.get("content")
+    if upload is None or upload.size > getattr(settings, "DOCUMENT_UPLOAD_MAX_BYTES", 10 * 1024 * 1024):
+        raise DocumentAccessError("A valid document upload is required.")
+    document = form.save(commit=False)
+    document.owner = user
+    document.protection_status = Document.ProtectionStatus.PENDING
+    try:
+        with transaction.atomic():
+            document.save()
+            form.save_m2m()
+            if not document.content:
+                raise DocumentAccessError("The document was not stored.")
+            document.protection_status = Document.ProtectionStatus.READY
+            document.save(update_fields=["protection_status", "updated_at"])
+    except Exception:
+        if document.pk and document.content:
+            document.content.delete(save=False)
+        if document.pk:
+            document.delete()
+        raise
+    return document
+
+
+def cleanup_expired_documents():
+    documents = Document.objects.filter(
+        expiry_date__lt=document_today(),
+        protection_status=Document.ProtectionStatus.READY,
+    )
+    count = 0
+    for document in documents:
+        if document.content:
+            document.content.delete(save=False)
+        document.content = None
+        document.protection_status = Document.ProtectionStatus.DELETED
+        document.save(update_fields=["content", "protection_status", "updated_at"])
+        count += 1
+    return count
 
 
 def _json_value(value):

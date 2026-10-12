@@ -111,12 +111,16 @@ class ActivityLog(models.Model):
         TWO_FACTOR_VERIFIED = "two_factor_verified", "Two-factor verified"
         TWO_FACTOR_FAILED = "two_factor_failed", "Two-factor verification failed"
         TWO_FACTOR_DISABLED = "two_factor_disabled", "Two-factor disabled"
+        DOCUMENT_ACCESS_ALLOWED = "document_access_allowed", "Document access allowed"
+        DOCUMENT_ACCESS_DENIED = "document_access_denied", "Document access denied"
 
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="activity_logs"
+        User, null=True, blank=True, on_delete=models.CASCADE, related_name="activity_logs"
     )
     event_type = models.CharField(max_length=30, choices=EventType.choices)
     description = models.CharField(max_length=280)
+    document_reference = models.CharField(max_length=80, blank=True, default="")
+    context = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
