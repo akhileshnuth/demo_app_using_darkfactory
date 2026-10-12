@@ -1,5 +1,26 @@
 /* Base Styles for Consistent Visual Design */
 
+:root {
+    --color-bg: #f4f7fb;
+    --color-surface: #ffffff;
+    --color-surface-muted: #edf2f7;
+    --color-text: #172033;
+    --color-text-muted: #5d6b82;
+    --color-border: #d8e0eb;
+    --color-accent: #3157d5;
+    --color-accent-dark: #2443ad;
+    --color-accent-soft: #e8edff;
+    --color-danger: #b42318;
+    --color-danger-soft: #fff0ee;
+    --color-success: #16794c;
+    --color-success-soft: #e8f7ef;
+    --radius-sm: 0.45rem;
+    --radius-md: 0.8rem;
+    --shadow-sm: 0 1px 2px rgb(23 32 51 / 8%);
+    --shadow-md: 0 10px 30px rgb(23 32 51 / 8%);
+    --content-width: 72rem;
+}
+
 /* Base layout */
 html {
     height: 100%;
@@ -7,21 +28,66 @@ html {
 
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
     background-color: var(--color-bg);
     color: var(--color-text);
 }
 
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+a {
+    color: var(--color-accent-dark);
+    font-weight: 600;
+}
+
+a:hover {
+    color: var(--color-accent);
+}
+
+:focus-visible {
+    outline: 3px solid #f3b61f;
+    outline-offset: 3px;
+}
+
+.skip-link {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+    transform: translateY(-200%);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    background: var(--color-text);
+    color: white;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
 .app {
     display: flex;
-    flex-direction: column;
     min-height: 100vh;
 }
 
-header {
+.sidebar {
+    flex: 0 0 15rem;
     background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    padding: 1rem;
+    border-right: 1px solid var(--color-border);
+    padding: 1.5rem 1rem;
+}
+
+.sidebar::before {
+    display: block;
+    content: "Daylight";
+    padding: 0.25rem 0.75rem 1.75rem;
+    color: var(--color-accent-dark);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
 }
 
 nav ul {
@@ -31,22 +97,113 @@ nav ul {
 }
 
 nav li {
-    display: inline;
-    margin-right: 1rem;
+    margin: 0.25rem 0;
 }
 
 nav a {
+    display: block;
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.75rem;
     text-decoration: none;
     color: var(--color-text);
 }
 
 nav a:hover {
-    color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.shell {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 4.5rem;
+    padding: 1rem clamp(1rem, 4vw, 3rem);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.display-name {
+    overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.badge-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge, .unread-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    background: var(--color-accent);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
 }
 
 .main {
     flex-grow: 1;
-    padding: 1rem;
+    width: min(100%, var(--content-width));
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.main > h1, .public-main > h1 {
+    margin: 0 0 0.5rem;
+    color: var(--color-text);
+    font-size: clamp(1.75rem, 3vw, 2.35rem);
+    letter-spacing: -0.035em;
+}
+
+.main > header {
+    margin: -1rem -1rem 1.5rem;
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    background: transparent;
+}
+
+.main > header h1 {
+    margin: 0 0 0.5rem;
+}
+
+.placeholder, .auth-form, .profile-form, .filter-form, table,
+.checklist-list, .notification-list, .activity-list, .contact-list, .share-list {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.placeholder {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+}
+
+.placeholder h2 {
+    margin-top: 0;
 }
 
 footer {
@@ -55,15 +212,192 @@ footer {
     padding: 1rem;
 }
 
+button, input, select, textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    background: var(--color-accent);
+    color: white;
+    font-weight: 700;
+}
+
+button:hover {
+    border-color: var(--color-accent-dark);
+    background: var(--color-accent-dark);
+}
+
+button:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+button.danger {
+    border-color: var(--color-danger);
+    background: var(--color-danger);
+}
+
+input, select, textarea {
+    width: 100%;
+    border: 1px solid #aab7c9;
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.75rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-weight: 700;
+}
+
+.form-field {
+    margin-bottom: 1rem;
+}
+
+.form-errors, .error, .messages .error, .has-errors {
+    color: var(--color-danger);
+}
+
+.form-errors, .messages {
+    margin: 1rem 0;
+    border-left: 4px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    background: var(--color-danger-soft);
+}
+
+.success {
+    border-left: 4px solid var(--color-success);
+    padding: 0.75rem 1rem;
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.empty {
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+}
+
+.public-main {
+    width: min(100% - 2rem, 30rem);
+    margin: 8vh auto;
+    padding: clamp(1.5rem, 5vw, 3rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+}
+
+.auth-form {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+}
+
+.public-main button[type="submit"] {
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background: var(--color-surface-muted);
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+tr:last-child td {
+    border-bottom: 0;
+}
+
+.filter-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+}
+
+.filter-form button, .filter-form > a {
+    margin-bottom: 0.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (forced-colors: active) {
+    button, a, input, select, textarea {
+        forced-color-adjust: auto;
+    }
+}
+
 @media (max-width: 600px) {
-    header, footer {
+    .app {
+        display: block;
+    }
+    .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--color-border);
+        padding: 0.75rem;
+    }
+    .sidebar::before {
+        padding: 0.25rem 0.5rem 0.75rem;
+    }
+    .sidebar nav ul {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.25rem;
+    }
+    .sidebar nav a {
+        padding: 0.55rem;
+        font-size: 0.9rem;
+    }
+    .header, footer {
         padding: 0.5rem;
     }
-    nav li {
-        display: block;
-        margin: 0.5rem 0;
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 1rem;
     }
     .main {
-        padding: 0.5rem;
+        padding: 1.25rem 1rem;
+    }
+    .filter-form {
+        grid-template-columns: 1fr;
+    }
+    table {
+        display: block;
+        overflow-x: auto;
+    }
+    .main > header {
+        margin: -0.5rem -0.5rem 1rem;
     }
 }

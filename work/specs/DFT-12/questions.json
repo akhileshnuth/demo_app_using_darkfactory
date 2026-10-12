@@ -1,0 +1,54 @@
+{
+  "questions": [
+    {
+      "question": "Which screens are in scope for the visual design pass: every user-facing template, only the authenticated screens linked from the shared shell, or a smaller screen inventory you will provide?",
+      "kind": "short",
+      "options": [],
+      "recommended": "All user-facing templates, including registration, dashboard, checklist, emergency-access, notification, profile/activity, and Vault screens.",
+      "why": "The specification measures unnamed primary screens, while the repository contains multiple template families whose inclusion changes the implementation and review scope."
+    },
+    {
+      "question": "What visual reference should govern the refreshed colors, typography, spacing, surfaces, and component states?",
+      "kind": "choice",
+      "options": [
+        {
+          "label": "A",
+          "text": "Use a supplied brand guide, design file, or approved visual reference"
+        },
+        {
+          "label": "B",
+          "text": "Have the implementer propose a visual system from the existing app for explicit human approval before broad application"
+        }
+      ],
+      "recommended": "B",
+      "why": "The ticket and repository provide no visual reference, so the acceptance baseline must either be supplied or approved before the design can be judged."
+    },
+    {
+      "question": "Which viewport widths or ranges must be treated as supported and included in responsive verification?",
+      "kind": "short",
+      "options": [],
+      "recommended": "Desktop widths from 1280px down to 768px, plus mobile widths of 375px and 320px.",
+      "why": "The specification defers to existing supported viewports, but the repository exposes only a 600px CSS breakpoint and does not define the actual verification targets."
+    },
+    {
+      "question": "What repeatable evidence is required for visual states and responsive flows beyond the existing Django test suite?",
+      "kind": "choice",
+      "options": [
+        {
+          "label": "A",
+          "text": "Manual review against an approved visual checklist plus the existing automated tests"
+        },
+        {
+          "label": "B",
+          "text": "Automated browser tests for key states and viewports plus manual visual approval"
+        },
+        {
+          "label": "C",
+          "text": "Screenshot or visual-regression tests for the in-scope screens plus manual visual approval"
+        }
+      ],
+      "recommended": "B",
+      "why": "The repository has no browser or screenshot test setup, while the specification requires repeatable verification of focus, states, workflows, and viewport behavior."
+    }
+  ]
+}
