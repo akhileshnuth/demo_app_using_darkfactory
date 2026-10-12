@@ -1,15 +1,10 @@
 
-# Add Import for required Libraries
-import csv
-import zipfile
-from io import StringIO
-
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
-from django.core.files.storage import FileSystemStorage
 from django.views.generic import ListView, View
 
 from .models import Category, Document, DocumentType, Subject
+from .services import EXPORT_FILENAME, VaultExportError, build_vault_export
 
 
 class DocumentListView(LoginRequiredMixin, ListView):
@@ -59,23 +54,22 @@ class DocumentListView(LoginRequiredMixin, ListView):
         context["pagination_query"] = query.urlencode()
         return context
 
-# Add the ExportView class
 class ExportView(LoginRequiredMixin, View):
     def get(self, request):
-        user_documents = Document.objects.filter(owner=request.user)
+        try:
+            content = build_vault_export(request.user)
+        except VaultExportError as error:
+            return HttpResponse(
+                f"Export failed: {error} Please retry.",
+                status=503,
+                content_type="text/plain",
+            )
 
-        # Create a zip file in memory
-        zip_filename = 'vault_data.zip'
-        response = HttpResponse(content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename={zip_filename}'
+        response = HttpResponse(content, content_type="application/zip")
+        response["Content-Disposition"] = f'attachment; filename="{EXPORT_FILENAME}"'
+        return response
 
-        with zipfile.ZipFile(response, 'w') as zip_file:
-            # Prepare data for CSV
-            csv_file_path = 'vault_data_summary.csv'
-            csv_file = StringIO()
-            csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(['Title', 'Type', 'Category', 'Issue Date', 'Expiry Date', 'Notes'])
-
+        if False:
             for document in user_documents:
                 # Save document file to zip
                 document_file_path = document.file.name
@@ -89,7 +83,3 @@ class ExportView(LoginRequiredMixin, View):
                     document.expiry_date,
                     document.notes,
                 ])
-
-            # Save the CSV to the zip
-            zip_file.writestr(csv_file_path, csv_file.getvalue())
-        return response
