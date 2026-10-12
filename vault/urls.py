@@ -1,10 +1,14 @@
-# Include the path for exporting data
-from .views import ExportView
+from django.urls import path
 
-urlpatterns += [
+from .views import DocumentListView, ExportView
+
+app_name = "vault"
+
+urlpatterns = [
+    path("documents/", DocumentListView.as_view(), name="document_list"),
     path(
-        'export/',
+        "export/",
         ExportView.as_view(),
-        name='export_data',
+        name="export_data",
     ),
 ]
