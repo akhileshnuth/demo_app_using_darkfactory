@@ -12,8 +12,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Dev-only key. A real deployment must override this.
-SECRET_KEY = "django-insecure-dft-7-scaffold-dev-key"
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 DEBUG = True
 
