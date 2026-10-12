@@ -12,8 +12,10 @@
   <dd>{{ document.subject.name }}</dd>
   <dt>Document Type</dt>
   <dd>{{ document.document_type.name }}</dd>
-  <dt>Notes</dt>
-  <dd>{{ document.notes|default:"—" }}</dd>
+   <dt>Notes</dt>
+   <dd>{{ document.notes|default:"—" }}</dd>
+   <dt>Expiry date</dt>
+   <dd>{{ document.expiry_date|default:"—" }}</dd>
   <dt>Created</dt>
   <dd>{{ document.created_at }}</dd>
   <dt>Updated</dt>

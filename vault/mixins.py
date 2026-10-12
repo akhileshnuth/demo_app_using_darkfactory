@@ -6,7 +6,8 @@ assigned documents.
 """
 
 from django.contrib import messages
-from django.db import ProtectedError
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import redirect
 
 
@@ -15,6 +16,15 @@ class OwnerQuerysetMixin:
 
     def get_queryset(self):
         return super().get_queryset().filter(owner=self.request.user)
+
+
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Allow taxonomy management to staff and superuser accounts only."""
+
+    raise_exception = True
+
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.is_superuser
 
 
 class ProtectedDeleteMixin:

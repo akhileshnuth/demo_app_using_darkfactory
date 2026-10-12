@@ -1,8 +1,14 @@
-
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
-from django.views.generic import ListView, View
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView, View
 
+from .forms import CategoryForm, DocumentForm, DocumentTypeForm, SubjectForm
+from .mixins import OwnerQuerysetMixin, ProtectedDeleteMixin, StaffRequiredMixin
 from .models import Category, Document, DocumentType, Subject
 from .services import EXPORT_FILENAME, VaultExportError, build_vault_export
 
@@ -53,6 +59,168 @@ class DocumentListView(LoginRequiredMixin, ListView):
         query.pop(self.page_kwarg, None)
         context["pagination_query"] = query.urlencode()
         return context
+
+
+class DocumentDetailView(OwnerQuerysetMixin, LoginRequiredMixin, DetailView):
+    model = Document
+    template_name = "vault/document_detail.html"
+    context_object_name = "document"
+
+
+class DocumentCreateView(LoginRequiredMixin, CreateView):
+    model = Document
+    form_class = DocumentForm
+    template_name = "vault/document_form.html"
+    success_url = reverse_lazy("vault:document_list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.owner = self.request.user
+        try:
+            return super().form_valid(form)
+        except IntegrityError:
+            form.add_error("title", "A document with this title already exists.")
+            return self.form_invalid(form)
+
+
+class DocumentUpdateView(OwnerQuerysetMixin, LoginRequiredMixin, UpdateView):
+    model = Document
+    form_class = DocumentForm
+    template_name = "vault/document_form.html"
+    success_url = reverse_lazy("vault:document_list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except IntegrityError:
+            form.add_error("title", "A document with this title already exists.")
+            return self.form_invalid(form)
+
+
+class DocumentDeleteView(OwnerQuerysetMixin, LoginRequiredMixin, DeleteView):
+    model = Document
+    template_name = "vault/document_confirm_delete.html"
+    success_url = reverse_lazy("vault:document_list")
+
+
+class TaxonomyListView(LoginRequiredMixin, ListView):
+    context_object_name = "objects"
+
+    def get_context_object_name(self, object_list):
+        return self.context_object_name
+
+
+class CategoryListView(TaxonomyListView):
+    model = Category
+    template_name = "vault/category_list.html"
+    context_object_name = "categories"
+
+
+class SubjectListView(TaxonomyListView):
+    model = Subject
+    template_name = "vault/subject_list.html"
+    context_object_name = "subjects"
+
+
+class DocumentTypeListView(TaxonomyListView):
+    model = DocumentType
+    template_name = "vault/documenttype_list.html"
+    context_object_name = "document_types"
+
+
+class TaxonomyCreateView(StaffRequiredMixin, CreateView):
+    template_name = "vault/%(model_name)s_form.html"
+    success_url = reverse_lazy("vault:category_list")
+
+    def get_success_url(self):
+        return reverse_lazy("vault:%s_list" % self.model._meta.model_name)
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except IntegrityError:
+            form.add_error("name", "A record with this name already exists.")
+            return self.form_invalid(form)
+
+
+class CategoryCreateView(TaxonomyCreateView):
+    model, form_class = Category, CategoryForm
+    template_name = "vault/category_form.html"
+
+
+class SubjectCreateView(TaxonomyCreateView):
+    model, form_class = Subject, SubjectForm
+    template_name = "vault/subject_form.html"
+
+
+class DocumentTypeCreateView(TaxonomyCreateView):
+    model, form_class = DocumentType, DocumentTypeForm
+    template_name = "vault/documenttype_form.html"
+
+
+class TaxonomyUpdateView(StaffRequiredMixin, UpdateView):
+    def get_success_url(self):
+        return reverse_lazy("vault:%s_list" % self.model._meta.model_name)
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except IntegrityError:
+            form.add_error("name", "A record with this name already exists.")
+            return self.form_invalid(form)
+
+
+class CategoryUpdateView(TaxonomyUpdateView):
+    model, form_class = Category, CategoryForm
+    template_name = "vault/category_form.html"
+
+
+class SubjectUpdateView(TaxonomyUpdateView):
+    model, form_class = Subject, SubjectForm
+    template_name = "vault/subject_form.html"
+
+
+class DocumentTypeUpdateView(TaxonomyUpdateView):
+    model, form_class = DocumentType, DocumentTypeForm
+    template_name = "vault/documenttype_form.html"
+
+
+class TaxonomyDeleteView(StaffRequiredMixin, ProtectedDeleteMixin, DeleteView):
+    def get_success_url(self):
+        return reverse_lazy("vault:%s_list" % self.model._meta.model_name)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except ProtectedError:
+            messages.error(request, self.protected_message)
+            return redirect(self.get_success_url())
+
+
+class CategoryDeleteView(TaxonomyDeleteView):
+    model, template_name = Category, "vault/category_confirm_delete.html"
+
+
+class SubjectDeleteView(TaxonomyDeleteView):
+    model, template_name = Subject, "vault/subject_confirm_delete.html"
+
+
+class DocumentTypeDeleteView(TaxonomyDeleteView):
+    model, template_name = DocumentType, "vault/documenttype_confirm_delete.html"
+
+
+class LegacyDocumentListRedirect(View):
+    def get(self, request):
+        return redirect("vault:document_list", permanent=True)
 
 class ExportView(LoginRequiredMixin, View):
     def get(self, request):
