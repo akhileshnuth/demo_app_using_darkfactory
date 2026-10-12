@@ -8,16 +8,108 @@ email (see ``accounts.models.User``).
 """
 
 import os
+from email.utils import parseaddr
 from pathlib import Path
+from urllib.parse import urlparse
+
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Dev-only key. A real deployment must override this.
-SECRET_KEY = "django-insecure-dft-7-scaffold-dev-key"
 
-DEBUG = True
+def _required(name):
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise ImproperlyConfigured(f"{name} is required")
+    return value
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
+
+def _boolean(name, default=None):
+    value = os.environ.get(name)
+    if value is None and default is not None:
+        return default
+    if value is None:
+        raise ImproperlyConfigured(f"{name} is required and must be true or false")
+    value = value.strip().lower()
+    if value not in {"true", "false"}:
+        raise ImproperlyConfigured(f"{name} must be true or false")
+    return value == "true"
+
+
+def _integer(name, minimum, maximum=None, default=None):
+    value = os.environ.get(name)
+    if value is None and default is not None:
+        return default
+    if value is None:
+        raise ImproperlyConfigured(f"{name} is required")
+    try:
+        result = int(value.strip())
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"{name} must be an integer") from exc
+    if result < minimum or (maximum is not None and result > maximum):
+        limit = f" and at most {maximum}" if maximum is not None else ""
+        raise ImproperlyConfigured(f"{name} must be at least {minimum}{limit}")
+    return result
+
+
+def _list(name, *, hosts=False):
+    values = [item.strip() for item in _required(name).split(",")]
+    if any(not item or item == "*" for item in values):
+        raise ImproperlyConfigured(f"{name} must not contain empty or wildcard values")
+    for value in values:
+        if hosts:
+            if "://" in value or "/" in value or " " in value:
+                raise ImproperlyConfigured(f"{name} contains an invalid host")
+        elif _origin(value) is None:
+            raise ImproperlyConfigured(f"{name} contains an invalid HTTPS origin")
+    return values
+
+
+def _origin(value):
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or not parsed.netloc or parsed.path not in {"", "/"}:
+        return None
+    if parsed.query or parsed.fragment or "*" in parsed.netloc:
+        return None
+    try:
+        parsed.port
+    except ValueError:
+        return None
+    return value.rstrip("/")
+
+
+def _absolute_path(name):
+    value = Path(_required(name))
+    if not value.is_absolute():
+        raise ImproperlyConfigured(f"{name} must be an absolute path")
+    return value.resolve()
+
+
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "").strip()
+if DJANGO_ENV not in {"development", "production"}:
+    raise ImproperlyConfigured("DJANGO_ENV must be exactly development or production")
+
+if DJANGO_ENV == "production":
+    SECRET_KEY = _required("DJANGO_SECRET_KEY")
+    if SECRET_KEY.startswith("django-insecure-"):
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY must not use a development key")
+else:
+    SECRET_KEY = os.environ.get(
+        "DJANGO_SECRET_KEY", "django-insecure-dft-7-scaffold-dev-key"
+    )
+
+DEBUG = DJANGO_ENV == "development"
+
+if DJANGO_ENV == "production":
+    ALLOWED_HOSTS = _list("DJANGO_ALLOWED_HOSTS", hosts=True)
+    CSRF_TRUSTED_ORIGINS = _list("DJANGO_CSRF_TRUSTED_ORIGINS")
+    PUBLIC_URL = _origin(_required("DJANGO_PUBLIC_URL"))
+    if PUBLIC_URL is None:
+        raise ImproperlyConfigured("DJANGO_PUBLIC_URL must be an absolute HTTPS URL")
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
+    CSRF_TRUSTED_ORIGINS = []
+    PUBLIC_URL = "http://localhost"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -63,12 +155,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if DJANGO_ENV == "production":
+    DATABASES = {
+        "default": {
+            "ENGINE": _required("DJANGO_DB_ENGINE"),
+            "NAME": _required("DJANGO_DB_NAME"),
+            "HOST": _required("DJANGO_DB_HOST"),
+            "PORT": str(_integer("DJANGO_DB_PORT", 1, 65535)),
+            "USER": _required("DJANGO_DB_USER"),
+            "PASSWORD": _required("DJANGO_DB_PASSWORD"),
+        }
     }
-}
+    if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+        raise ImproperlyConfigured("DJANGO_DB_ENGINE must not select SQLite in production")
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -140,24 +246,71 @@ CLA_OK_TEMPLATES = {
 # option.
 EXPIRE_REMINDER_DAYS = 30
 
-# DFT-13: real SMTP transport for reminder emails. Values come from the
-# environment so each deployment supplies its own mail relay; localhost:25
-# remains the fallback for a self-hosted setup. During tests Django replaces
+# DFT-13: real SMTP transport for reminder emails. During tests Django replaces
 # this backend with the in-memory ``locmem`` backend automatically.
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "false").lower() == "true"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
-DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "Vault Reminders <noreply@localhost>"
-)
+if DJANGO_ENV == "production":
+    EMAIL_HOST = _required("EMAIL_HOST")
+    EMAIL_PORT = _integer("EMAIL_PORT", 1, 65535)
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "").strip()
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    if bool(EMAIL_HOST_USER) != bool(EMAIL_HOST_PASSWORD):
+        raise ImproperlyConfigured(
+            "EMAIL_HOST_USER and EMAIL_HOST_PASSWORD must be supplied together"
+        )
+    EMAIL_USE_TLS = _boolean("EMAIL_USE_TLS")
+    EMAIL_USE_SSL = _boolean("EMAIL_USE_SSL")
+    if EMAIL_USE_TLS and EMAIL_USE_SSL:
+        raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be true")
+    DEFAULT_FROM_EMAIL = _required("DEFAULT_FROM_EMAIL")
+    if "@" not in parseaddr(DEFAULT_FROM_EMAIL)[1]:
+        raise ImproperlyConfigured("DEFAULT_FROM_EMAIL must contain a valid address")
+else:
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+    EMAIL_PORT = _integer("EMAIL_PORT", 1, 65535, default=25)
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = _boolean("EMAIL_USE_TLS", default=False)
+    EMAIL_USE_SSL = _boolean("EMAIL_USE_SSL", default=False)
+    DEFAULT_FROM_EMAIL = os.environ.get(
+        "DEFAULT_FROM_EMAIL", "Vault Reminders <noreply@localhost>"
+    )
 
 # DFT-17: never place document bytes below a static or public media root.
-PRIVATE_DOCUMENT_ROOT = Path(
-    os.environ.get("PRIVATE_DOCUMENT_ROOT", BASE_DIR / "private_documents")
-)
+if DJANGO_ENV == "production":
+    PRIVATE_DOCUMENT_ROOT = _absolute_path("PRIVATE_DOCUMENT_ROOT")
+    STATIC_ROOT = _absolute_path("STATIC_ROOT")
+    if (
+        PRIVATE_DOCUMENT_ROOT == STATIC_ROOT
+        or STATIC_ROOT in PRIVATE_DOCUMENT_ROOT.parents
+        or PRIVATE_DOCUMENT_ROOT in STATIC_ROOT.parents
+    ):
+        raise ImproperlyConfigured("PRIVATE_DOCUMENT_ROOT must be outside STATIC_ROOT")
+    DOCUMENT_UPLOAD_MAX_BYTES = _integer("DOCUMENT_UPLOAD_MAX_BYTES", 1, 1024 * 1024 * 1024)
+else:
+    PRIVATE_DOCUMENT_ROOT = Path(
+        os.environ.get("PRIVATE_DOCUMENT_ROOT", BASE_DIR / "private_documents")
+    )
+    STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", BASE_DIR / "staticfiles"))
+    DOCUMENT_UPLOAD_MAX_BYTES = _integer(
+        "DOCUMENT_UPLOAD_MAX_BYTES", 1, 1024 * 1024 * 1024, default=10 * 1024 * 1024
+    )
 MEDIA_ROOT = PRIVATE_DOCUMENT_ROOT
-DOCUMENT_UPLOAD_MAX_BYTES = int(os.environ.get("DOCUMENT_UPLOAD_MAX_BYTES", 10 * 1024 * 1024))
+
+if DJANGO_ENV == "production":
+    TRUST_PROXY_SSL = _boolean("DJANGO_TRUST_PROXY_SSL")
+    if not TRUST_PROXY_SSL:
+        raise ImproperlyConfigured(
+            "DJANGO_TRUST_PROXY_SSL must be true for the HTTPS proxy topology"
+        )
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = _integer("DJANGO_HSTS_SECONDS", 0)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _boolean("DJANGO_HSTS_INCLUDE_SUBDOMAINS")
+    SECURE_HSTS_PRELOAD = _boolean("DJANGO_HSTS_PRELOAD")
+else:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
