@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Save your backup codes{% endblock %}
+
+{% block shell %}
+<main class="public-main">
+  <h1>Save your backup codes</h1>
+  <p>These codes are shown once. Store them somewhere safe.</p>
+  <ul>
+    {% for code in backup_codes %}<li><code>{{ code }}</code></li>{% endfor %}
+  </ul>
+  <a href="{% url 'dashboard' %}">Continue to dashboard</a>
+</main>
+{% endblock %}

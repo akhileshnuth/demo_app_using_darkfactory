@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Enable two-factor login{% endblock %}
+
+{% block shell %}
+<main class="public-main">
+  <h1>Enable two-factor login</h1>
+  <p>Add this provisioning value to your authenticator app:</p>
+  <p><code>{{ provisioning_uri }}</code></p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Verify and enable</button>
+  </form>
+</main>
+{% endblock %}
