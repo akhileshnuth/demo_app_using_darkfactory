@@ -1,10 +1,21 @@
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.http import FileResponse, Http404, HttpResponse
+from django.shortcuts import redirect, render
 from django.views.generic import ListView, View
+from pathlib import Path
 
+from .forms import DocumentForm
 from .models import Category, Document, DocumentType, Subject
-from .services import EXPORT_FILENAME, VaultExportError, build_vault_export
+from .services import (
+    DocumentAccessError,
+    EXPORT_FILENAME,
+    VaultExportError,
+    authorize_document_access,
+    build_vault_export,
+    save_uploaded_document,
+)
 
 
 class DocumentListView(LoginRequiredMixin, ListView):
@@ -83,3 +94,36 @@ class ExportView(LoginRequiredMixin, View):
                     document.expiry_date,
                     document.notes,
                 ])
+
+
+class DocumentUploadView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, "vault/document_upload.html", {"form": DocumentForm(user=request.user)})
+
+    def post(self, request):
+        form = DocumentForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            try:
+                save_uploaded_document(form, request.user)
+            except DocumentAccessError:
+                form.add_error("content", "The document could not be protected and stored.")
+            else:
+                return redirect("vault:document_list")
+        return render(request, "vault/document_upload.html", {"form": form}, status=400)
+
+
+class DocumentDownloadView(View):
+    def get(self, request, pk):
+        try:
+            document = authorize_document_access(pk, request.user)
+        except DocumentAccessError:
+            if not request.user.is_authenticated:
+                return redirect(f"/accounts/login/?next={request.path}")
+            raise Http404
+        try:
+            response = FileResponse(document.content.open("rb"), as_attachment=True,
+                                    filename=Path(document.content.name).name)
+        except (OSError, ValueError):
+            raise Http404
+        response["Cache-Control"] = "private, no-store"
+        return response
