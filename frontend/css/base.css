@@ -1,0 +1,17 @@
+/* Frontend CSS source. Keep the application stylesheet in static/css unchanged. */
+
+:root {
+    --color-bg: #f4f7fb;
+    --color-surface: #ffffff;
+    --color-text: #172033;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}

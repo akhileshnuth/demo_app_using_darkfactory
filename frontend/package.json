@@ -1,0 +1,13 @@
+{
+  "name": "lightspeed-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build:css": "node scripts/build-css.js build",
+    "lint:css": "node scripts/build-css.js lint",
+    "verify": "yarn lint:css && yarn build:css"
+  }
+}
