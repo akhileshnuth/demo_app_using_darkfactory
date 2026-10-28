@@ -38,13 +38,16 @@ class AnotherModel(models.Model):
 class Category(models.Model):
     """Document taxonomy: a single top-level vault category."""
 
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="vault_category_name_ci_unique")
+        ]
 
     def __str__(self):
         return self.name
@@ -53,13 +56,16 @@ class Category(models.Model):
 class Subject(models.Model):
     """Document taxonomy: a subject/domain a document belongs to."""
 
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="vault_subject_name_ci_unique")
+        ]
 
     def __str__(self):
         return self.name
@@ -68,7 +74,7 @@ class Subject(models.Model):
 class DocumentType(models.Model):
     """Document taxonomy: the kind of document (e.g. passport, licence)."""
 
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -77,6 +83,9 @@ class DocumentType(models.Model):
         ordering = ["name"]
         verbose_name = "document type"
         verbose_name_plural = "document types"
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="vault_document_type_name_ci_unique")
+        ]
 
     def __str__(self):
         return self.name
