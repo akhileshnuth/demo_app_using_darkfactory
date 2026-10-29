@@ -5,12 +5,12 @@
   "dependencies": [
     {
       "dependsOn": [],
-      "ref": "26c60817-f067-4125-892f-483e663f386e"
+      "ref": "3f662f50-8eeb-4e7f-8c4d-be644a4021a4"
     }
   ],
   "metadata": {
     "component": {
-      "bom-ref": "26c60817-f067-4125-892f-483e663f386e",
+      "bom-ref": "3f662f50-8eeb-4e7f-8c4d-be644a4021a4",
       "name": "/scan",
       "properties": [
         {
@@ -20,7 +20,7 @@
       ],
       "type": "application"
     },
-    "timestamp": "2026-10-12T07:58:27+00:00",
+    "timestamp": "2026-10-29T05:01:44+00:00",
     "tools": {
       "components": [
         {
@@ -35,7 +35,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:202ceb10-0a64-403c-bb6a-a349eed53438",
+  "serialNumber": "urn:uuid:6b42813c-fb4b-4ec2-879c-f2ec9958e5c2",
   "specVersion": "1.7",
   "version": 1,
   "vulnerabilities": []
