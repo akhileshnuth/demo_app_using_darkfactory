@@ -16,6 +16,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 def _required(name):
     value = os.environ.get(name, "").strip()
